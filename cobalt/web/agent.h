@@ -77,6 +77,9 @@ class Agent : public base::MessageLoop::DestructionObserver {
   typedef base::Callback<void(const script::HeapStatistics&)>
       JavaScriptHeapStatisticsCallback;
 
+  typedef base::Callback<void(const std::string&)>
+      JavaScriptStackTraceCallback;
+
   typedef base::Callback<void(Context*)> InitializeCallback;
   explicit Agent(const std::string& name);
   ~Agent();
@@ -109,6 +112,14 @@ class Agent : public base::MessageLoop::DestructionObserver {
   // intended thread should it want to.
   void RequestJavaScriptHeapStatistics(
       const JavaScriptHeapStatisticsCallback& callback);
+
+// Post a task that gets the current Stack Trace as a string for our
+// |JavaScriptEngine| to the web module thread, and then passes that to
+// |callback|.  Note that |callback| will be called on the main web module
+// thread.  It is the responsibility of |callback| to get back to its
+// intended thread should it want to.
+  void RequestJavaScriptStackTrace(
+          const JavaScriptStackTraceCallback& callback);
 
   // From base::MessageLoop::DestructionObserver.
   void WillDestroyCurrentMessageLoop() override;

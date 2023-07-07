@@ -41,6 +41,7 @@ H5vcc::H5vcc(const Settings& settings) {
 #endif
                         settings.user_agent_data, settings.global_environment,
                         settings.persistent_settings);
+  stack_spy_ = new H5vccStackSpy(settings.web_module, settings.environment_settings);
   storage_ =
       new H5vccStorage(settings.network_module, settings.persistent_settings);
   trace_event_ = new H5vccTraceEvent();
@@ -78,6 +79,7 @@ void H5vcc::TraceMembers(script::Tracer* tracer) {
   tracer->Trace(metrics_);
   tracer->Trace(runtime_);
   tracer->Trace(settings_);
+  tracer->Trace(stack_spy_);
   tracer->Trace(storage_);
   tracer->Trace(system_);
   tracer->Trace(trace_event_);

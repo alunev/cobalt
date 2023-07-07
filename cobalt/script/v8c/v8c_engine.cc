@@ -26,6 +26,7 @@
 #include "cobalt/script/v8c/isolate_fellowship.h"
 #include "cobalt/script/v8c/v8c_global_environment.h"
 #include "starboard/once.h"
+#include "base/strings/stringprintf.h"
 
 namespace cobalt {
 namespace script {
@@ -209,6 +210,37 @@ HeapStatistics V8cEngine::GetHeapStatistics() {
   isolate_->GetHeapStatistics(&v8_heap_statistics);
   return {v8_heap_statistics.total_heap_size(),
           v8_heap_statistics.used_heap_size()};
+}
+
+static std::string ToStringOrDefault(v8::Isolate* isolate,
+                                     const v8::Local<v8::String>& v8_string,
+                                     const std::string& dflt) {
+    if (v8_string.IsEmpty())
+        return dflt;
+    std::string ascii_value = *v8::String::Utf8Value(isolate, v8_string);
+    return ascii_value.empty() ? dflt : ascii_value;
+}
+
+std::string V8cEngine::GetCurrentStackTrace() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  v8::Local<v8::StackTrace> stack_trace =
+      v8::StackTrace::CurrentStackTrace(isolate(), 10);
+  if (stack_trace.IsEmpty() || stack_trace->GetFrameCount() <= 0) {
+    return "    <no stack trace>";
+  }
+  std::string result;
+  for (int i = 0; i < stack_trace->GetFrameCount(); ++i) {
+    v8::Local<v8::StackFrame> frame = stack_trace->GetFrame(isolate(), i);
+    CHECK(!frame.IsEmpty());
+    result += base::StringPrintf(
+        "\n    at %s (%s:%d:%d)",
+        ToStringOrDefault(isolate(), frame->GetFunctionName(), "<anonymous>")
+            .c_str(),
+        ToStringOrDefault(isolate(), frame->GetScriptName(), "<anonymous>")
+            .c_str(),
+        frame->GetLineNumber(), frame->GetColumn());
+  }
+  return result;
 }
 
 void V8cEngine::UpdateDateTimeConfiguration() {

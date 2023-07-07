@@ -76,6 +76,9 @@ class JavaScriptEngine {
   // be unable to provide perfectly accurate values.
   virtual HeapStatistics GetHeapStatistics() = 0;
 
+  // Get the current Stack Trace.
+  virtual std::string GetCurrentStackTrace() = 0;
+
   // Update the date/time configuration in response to a change in the setting.
   virtual void UpdateDateTimeConfiguration() = 0;
 

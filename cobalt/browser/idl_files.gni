@@ -167,6 +167,7 @@ source_idl_files = [
   "//cobalt/h5vcc/h5vcc_runtime.idl",
   "//cobalt/h5vcc/h5vcc_runtime_event_target.idl",
   "//cobalt/h5vcc/h5vcc_settings.idl",
+  "//cobalt/h5vcc/h5vcc_stack_spy.idl",
   "//cobalt/h5vcc/h5vcc_storage.idl",
   "//cobalt/h5vcc/h5vcc_screen.idl",
   "//cobalt/h5vcc/h5vcc_system.idl",

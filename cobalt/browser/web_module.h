@@ -384,6 +384,14 @@ class WebModule : public base::MessageLoop::DestructionObserver,
   void RequestJavaScriptHeapStatistics(
       const web::Agent::JavaScriptHeapStatisticsCallback& callback);
 
+  // Post a task that gets the current Stack Trace as a string for our
+  // |JavaScriptEngine| to the web module thread, and then passes that to
+  // |callback|.  Note that |callback| will be called on the main web module
+  // thread.  It is the responsibility of |callback| to get back to its
+  // intended thread should it want to.
+  void RequestJavaScriptStackTrace(
+          const web::Agent::JavaScriptStackTraceCallback& callback);
+
   // Indicate the web module is ready to freeze.
   bool IsReadyToFreeze();
 

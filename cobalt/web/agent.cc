@@ -628,5 +628,20 @@ void Agent::RequestJavaScriptHeapStatistics(
   callback.Run(heap_statistics);
 }
 
+void Agent::RequestJavaScriptStackTrace(
+        const JavaScriptStackTraceCallback &callback) {
+  TRACE_EVENT0("cobalt::web", "Agent::RequestJavaScriptStackTrace()");
+  DCHECK(message_loop());
+  if (base::MessageLoop::current() != message_loop()) {
+    message_loop()->task_runner()->PostTask(
+            FROM_HERE, base::Bind(&Agent::RequestJavaScriptStackTrace,
+                                  base::Unretained(this), callback));
+    return;
+  }
+  std::string stack_trace =
+          context_->javascript_engine()->GetCurrentStackTrace();
+  callback.Run(stack_trace);
+}
+
 }  // namespace web
 }  // namespace cobalt

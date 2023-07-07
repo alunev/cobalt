@@ -1641,6 +1641,11 @@ void WebModule::RequestJavaScriptHeapStatistics(
   web_agent_->RequestJavaScriptHeapStatistics(callback);
 }
 
+void WebModule::RequestJavaScriptStackTrace(
+        const web::Agent::JavaScriptStackTraceCallback& callback) {
+  web_agent_->RequestJavaScriptStackTrace(callback);
+}
+
 void WebModule::GetIsReadyToFreeze(volatile bool* is_ready_to_freeze) {
   // We must block here so that the call doesn't return until the thread
   // has had a chance to fill in the return value.

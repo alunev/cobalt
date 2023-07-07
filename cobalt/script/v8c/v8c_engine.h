@@ -45,6 +45,7 @@ class V8cEngine : public JavaScriptEngine {
   void AdjustAmountOfExternalAllocatedMemory(int64_t bytes) override;
   bool RegisterErrorHandler(JavaScriptEngine::ErrorHandler handler) override;
   HeapStatistics GetHeapStatistics() override;
+  std::string GetCurrentStackTrace() override;
   void UpdateDateTimeConfiguration() override;
 
   v8::Isolate* isolate() const { return isolate_; }

@@ -28,6 +28,7 @@
 #include "cobalt/h5vcc/h5vcc_metrics.h"
 #include "cobalt/h5vcc/h5vcc_runtime.h"
 #include "cobalt/h5vcc/h5vcc_settings.h"
+#include "cobalt/h5vcc/h5vcc_stack_spy.h"
 #include "cobalt/h5vcc/h5vcc_storage.h"
 #include "cobalt/h5vcc/h5vcc_system.h"
 #include "cobalt/h5vcc/h5vcc_trace_event.h"
@@ -67,6 +68,8 @@ class H5vcc : public script::Wrappable {
     web::NavigatorUAData* user_agent_data;
     script::GlobalEnvironment* global_environment;
     persistent_storage::PersistentSettings* persistent_settings;
+    browser::WebModule* web_module;
+    script::EnvironmentSettings* environment_settings;
   };
 
   explicit H5vcc(const Settings& config);
@@ -84,6 +87,7 @@ class H5vcc : public script::Wrappable {
   const scoped_refptr<H5vccMetrics>& metrics() const { return metrics_; }
   const scoped_refptr<H5vccRuntime>& runtime() const { return runtime_; }
   const scoped_refptr<H5vccSettings>& settings() const { return settings_; }
+  const scoped_refptr<H5vccStackSpy>& stack_spy() const { return stack_spy_; }
   const scoped_refptr<H5vccStorage>& storage() const { return storage_; }
   const scoped_refptr<H5vccSystem>& system() const { return system_; }
   const scoped_refptr<H5vccTraceEvent>& trace_event() const {
@@ -105,6 +109,7 @@ class H5vcc : public script::Wrappable {
   scoped_refptr<H5vccMetrics> metrics_;
   scoped_refptr<H5vccRuntime> runtime_;
   scoped_refptr<H5vccSettings> settings_;
+  scoped_refptr<H5vccStackSpy> stack_spy_;
   scoped_refptr<H5vccStorage> storage_;
   scoped_refptr<H5vccSystem> system_;
   scoped_refptr<H5vccTraceEvent> trace_event_;
