@@ -20,7 +20,10 @@
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
 #include "starboard/common/file.h"
+#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+// #include "cobalt/persistent_storage/persistent_settings.h"
+#include "base/test/scoped_task_environment.h"
 
 namespace cobalt {
 namespace watchdog {
@@ -35,7 +38,9 @@ const int64_t kWatchdogSleepDuration = kWatchdogMonitorFrequency * 4;
 
 class WatchdogTest : public testing::Test {
  protected:
-  WatchdogTest() {}
+  WatchdogTest()
+      : scoped_task_environment_(
+            base::test::ScopedTaskEnvironment::MainThreadType::DEFAULT) {}
 
   void SetUp() final {
     watchdog_ = new watchdog::Watchdog();
@@ -48,6 +53,8 @@ class WatchdogTest : public testing::Test {
     watchdog_->Uninitialize();
     delete watchdog_;
     watchdog_ = nullptr;
+
+    DeleteTempSettingsFile();
   }
 
   base::Value CreateDummyViolationDict(std::string desc, int begin, int end) {
@@ -79,7 +86,23 @@ class WatchdogTest : public testing::Test {
     return violation.Clone();
   }
 
+  std::string GetPersistentSettingsFilePath() {
+    std::vector<char> storage_dir(kSbFileMaxPath + 1, 0);
+    SbSystemGetPath(kSbSystemPathCacheDirectory, storage_dir.data(),
+                    kSbFileMaxPath);
+
+    return std::string(storage_dir.data()) + kSbFileSepString + kSettingsFileName;
+  }
+
+  void DeleteTempSettingsFile() {
+    starboard::SbFileDeleteRecursive(GetPersistentSettingsFilePath().c_str(), true);
+  }
+
+  const std::string kSettingsFileName = "test-settings.json";
+
   watchdog::Watchdog* watchdog_;
+  std::string persistent_settings_file_;
+  base::test::ScopedTaskEnvironment scoped_task_environment_;
 };
 
 TEST_F(WatchdogTest, RedundantRegistersShouldFail) {
@@ -687,6 +710,28 @@ TEST_F(WatchdogTest, ViolationContainsEmptyLogTrace) {
   base::Value* logTrace = violations->GetList()[0].FindKey("logTrace");
 
   ASSERT_EQ(logTrace->GetList().size(), 0);
+}
+
+TEST_F(WatchdogTest, LogtraceMethodsAreNoopWhenLogtraceIsDisabled) {
+  // init and destroy existing watchdog to re-initialize it later
+  watchdog_->Register("test-name", "test-desc", base::kApplicationStateStarted,
+                      kWatchdogMonitorFrequency);
+  TearDown();
+
+  auto persistent_settings =
+      std::make_unique<persistent_storage::PersistentSettings>(kSettingsFileName);
+  persistent_settings->ValidatePersistentSettings();
+  persistent_settings->SetPersistentSetting(kPersistentSettingLogtraceEnable, std::make_unique<base::Value>(false));
+
+  printf("persistent_settings_->GetPersistentSettingAsBool() = %b\n", persistent_settings->GetPersistentSettingAsBool(kPersistentSettingLogtraceEnable, kDefaultSettingLogtraceEnable));
+  ASSERT_FALSE(persistent_settings->GetPersistentSettingAsBool(kPersistentSettingLogtraceEnable, kDefaultSettingLogtraceEnable));
+
+  watchdog_ = new watchdog::Watchdog();
+  watchdog_->InitializeCustom(persistent_settings.get(),
+                              std::string(kWatchdogViolationsJson),
+                              kWatchdogMonitorFrequency);
+
+  ASSERT_FALSE(watchdog_->LogEvent("foo"));
 }
 
 }  // namespace watchdog
