@@ -78,6 +78,7 @@ bool Watchdog::InitializeCustom(
     std::string watchdog_file_name, int64_t watchdog_monitor_frequency) {
   persistent_settings_ = persistent_settings;
   is_disabled_ = !GetPersistentSettingWatchdogEnable();
+  is_logtrace_disabled_ = !GetPersistentSettingLogtraceEnable();
 
   if (is_disabled_) return true;
 
@@ -769,14 +770,49 @@ void Watchdog::SetPersistentSettingWatchdogCrash(bool can_trigger_crash) {
 }
 
 bool Watchdog::LogEvent(const std::string& event) {
+  if (is_logtrace_disabled_) {
+    return false;
+  }
+
   return instrumentation_log_.LogEvent(event);
 }
 
 std::vector<std::string> Watchdog::GetLogTrace() {
+  if (is_logtrace_disabled_) {
+    return {};
+  }
+
   return instrumentation_log_.GetLogTrace();
 }
 
-void Watchdog::ClearLog() { instrumentation_log_.ClearLog(); }
+void Watchdog::ClearLog() {
+  if (is_logtrace_disabled_) {
+    return;
+  }
+
+  instrumentation_log_.ClearLog();
+}
+
+bool Watchdog::GetPersistentSettingLogtraceEnable() {
+  if (!persistent_settings_) return kDefaultSettingLogtraceEnable;
+
+  printf("persistent_settings_->GetPersistentSettingAsBool() = %b\n",
+         persistent_settings_->GetPersistentSettingAsBool(
+             kPersistentSettingLogtraceEnable, kDefaultSettingLogtraceEnable));
+
+  // Gets the boolean that controls whether or not LogTrace is enabled.
+  return persistent_settings_->GetPersistentSettingAsBool(
+      kPersistentSettingLogtraceEnable, kDefaultSettingLogtraceEnable);
+}
+
+void Watchdog::SetPersistentSettingLogtraceEnable(bool enable_logtrace) {
+  if (!persistent_settings_) return;
+
+  // Sets the boolean that controls whether or not LogTrace is enabled.
+  persistent_settings_->SetPersistentSetting(
+      kPersistentSettingLogtraceEnable,
+      std::make_unique<base::Value>(enable_logtrace));
+}
 
 #if defined(_DEBUG)
 // Sleeps threads for Watchdog debugging.
