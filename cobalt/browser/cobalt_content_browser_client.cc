@@ -42,12 +42,6 @@
 #include "components/prefs/pref_service.h"
 #include "components/prefs/pref_service_factory.h"
 #include "components/variations/service/variations_service.h"
-#include "components/metrics/metrics_state_manager.h"
-#include "components/metrics/test/test_enabled_state_provider.h"
-#include "components/prefs/in_memory_pref_store.h"
-#include "components/prefs/json_pref_store.h"
-#include "components/prefs/pref_registry_simple.h"
-#include "components/prefs/pref_service.h"
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/render_process_host.h"
 #include "content/public/browser/web_contents.h"
@@ -188,6 +182,36 @@ CobaltContentBrowserClient::CobaltContentBrowserClient()
               nullptr,
               base::OnTaskRunnerDeleter(nullptr))) {
   DETACH_FROM_THREAD(thread_checker_);
+}
+// In content browser tests we allow more than one ShellContentBrowserClient
+// to be created (actually, ContentBrowserTestContentBrowserClient). Any state
+// needed should be added here so that it's shared between the instances.
+struct SharedState {
+  SharedState() {
+#if BUILDFLAG(IS_MAC)
+    location_manager = std::make_unique<device::FakeGeolocationManager>();
+    location_manager->SetSystemPermission(
+        device::LocationSystemPermissionStatus::kAllowed);
+#endif
+  }
+
+#if BUILDFLAG(IS_MAC)
+  std::unique_ptr<device::FakeGeolocationManager> location_manager;
+#endif
+
+  // Owned by content::BrowserMainLoop.
+  raw_ptr<CobaltBrowserMainParts, DanglingUntriaged> cobalt_browser_main_parts =
+      nullptr;
+
+  std::unique_ptr<PrefService> local_state;
+};
+
+SharedState& GetSharedState() {
+  static SharedState* g_shared_state = nullptr;
+  if (!g_shared_state) {
+    g_shared_state = new SharedState();
+  }
+  return *g_shared_state;
 }
 
 CobaltContentBrowserClient::~CobaltContentBrowserClient() = default;
