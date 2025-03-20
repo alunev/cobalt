@@ -192,7 +192,7 @@ constexpr base::FeatureParam<int> kRendererProcessIOThreadLogLevel{
     static_cast<int>(LoggingLevel::kUmaOnly)};
 constexpr base::FeatureParam<int> kRendererProcessMainThreadLogLevel{
     &kEnableHangWatcher, "renderer_process_main_thread_log_level",
-    static_cast<int>(LoggingLevel::kUmaOnly)};
+    static_cast<int>(LoggingLevel::kUmaAndCrash)};
 constexpr base::FeatureParam<int> kRendererProcessThreadPoolLogLevel{
     &kEnableHangWatcher, "renderer_process_threadpool_log_level",
     static_cast<int>(LoggingLevel::kUmaOnly)};
@@ -319,12 +319,15 @@ WatchHangsInScope::~WatchHangsInScope() {
 
 // static
 void HangWatcher::InitializeOnMainThread(ProcessType process_type) {
+  LOG(INFO) << "HangWatcher::InitializeOnMainThread()";
+
   DCHECK(!g_use_hang_watcher);
   DCHECK(g_io_thread_log_level == LoggingLevel::kNone);
   DCHECK(g_main_thread_log_level == LoggingLevel::kNone);
   DCHECK(g_threadpool_log_level == LoggingLevel::kNone);
 
-  bool enable_hang_watcher = base::FeatureList::IsEnabled(kEnableHangWatcher);
+//  bool enable_hang_watcher = base::FeatureList::IsEnabled(kEnableHangWatcher);
+  bool enable_hang_watcher = true;
 
   // Do not start HangWatcher in the GPU process until the issue related to
   // invalid magic signature in the GPU WatchDog is fixed
@@ -332,6 +335,7 @@ void HangWatcher::InitializeOnMainThread(ProcessType process_type) {
   if (process_type == ProcessType::kGPUProcess)
     enable_hang_watcher = false;
 
+  LOG(INFO) << "saving g_use_hang_watcher: true";
   g_use_hang_watcher.store(enable_hang_watcher, std::memory_order_relaxed);
 
   // Keep the process type.
@@ -406,6 +410,10 @@ void HangWatcher::UnitializeOnMainThreadForTesting() {
 
 // static
 bool HangWatcher::IsEnabled() {
+//  try a direct hardcode
+//  return true;
+
+  LOG(INFO) << "HangWatcher::IsEnabled(): " << g_use_hang_watcher.load(std::memory_order_relaxed);
   return g_use_hang_watcher.load(std::memory_order_relaxed);
 }
 
@@ -458,6 +466,8 @@ HangWatcher::HangWatcher()
           FROM_HERE,
           base::BindRepeating(&HangWatcher::OnMemoryPressure,
                               base::Unretained(this))) {
+  LOG(INFO) << "HangWatcher()";
+
   // |thread_checker_| should not be bound to the constructing thread.
   DETACH_FROM_THREAD(hang_watcher_thread_checker_);
 
@@ -543,10 +553,12 @@ HangWatcher::~HangWatcher() {
 }
 
 void HangWatcher::Start() {
+  LOG(INFO) << "HangWatcher::Start()";
   thread_.Start();
 }
 
 void HangWatcher::Stop() {
+  LOG(INFO) << "HangWatcher::Stop()";
   g_keep_monitoring.store(false, std::memory_order_relaxed);
   should_monitor_.Signal();
   thread_.Join();
@@ -616,6 +628,8 @@ void HangWatcher::Wait() {
 }
 
 void HangWatcher::Run() {
+  LOG(INFO) << "HangWatcher::Run()";
+
   // Monitor() should only run on |thread_|. Bind |thread_checker_| here to make
   // sure of that.
   DCHECK_CALLED_ON_VALID_THREAD(hang_watcher_thread_checker_);
