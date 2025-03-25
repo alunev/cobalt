@@ -115,7 +115,11 @@ class CobaltContentBrowserClient : public content::ShellContentBrowserClient {
       video_geometry_setter_service_;
   std::vector<std::unique_ptr<browser::CobaltTrustedURLLoaderHeaderClient>>
       cobalt_header_clients_;
+<<<<<<< HEAD
   std::unique_ptr<PrefService> exp_config_ = nullptr;
+=======
+  std::unique_ptr<PrefService> local_state_ = nullptr;
+>>>>>>> ffbb0577c51 (Initialize HangWatcher)
 
   THREAD_CHECKER(thread_checker_);
 };
