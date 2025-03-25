@@ -59,15 +59,10 @@ source_set("browser") {
     "//components/js_injection/browser:browser",
     "//components/metrics:metrics",
     "//components/metrics:test_support",
-<<<<<<< HEAD
     "//components/metrics_services_manager",
     "//components/os_crypt/sync",
     "//components/prefs:prefs",
     "//components/variations/service:service",
-=======
-    "//components/os_crypt/sync",
-    "//components/prefs:prefs",
->>>>>>> e331a839207 (Setup Cobalt Field Trials.)
     "//content/public/browser",
     "//starboard/($starboard_toolchain)",
 

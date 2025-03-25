@@ -17,11 +17,7 @@
 #include "base/path_service.h"
 #include "cobalt/browser/cobalt_browser_main_parts.h"
 #include "cobalt/browser/metrics/cobalt_metrics_service_client.h"
-<<<<<<< HEAD
 #include "cobalt/browser/metrics/cobalt_metrics_services_manager_client.h"
-=======
-// #include "cobalt/browser/metrics/cobalt_metrics_services_manager_client.h"
->>>>>>> 76d2d152582 (Initialize HangWatcher)
 #include "components/metrics/metrics_service.h"
 #include "components/metrics_services_manager/metrics_services_manager.h"
 #include "components/prefs/in_memory_pref_store.h"
@@ -50,7 +46,6 @@ int CobaltBrowserMainParts::PreCreateThreads() {
   return ShellBrowserMainParts::PreCreateThreads();
 }
 
-<<<<<<< HEAD
 int CobaltBrowserMainParts::PreMainMessageLoopRun() {
   StartMetricsRecording();
   return ShellBrowserMainParts::PreMainMessageLoopRun();
@@ -108,56 +103,6 @@ PrefService* CobaltBrowserMainParts::local_state() {
 
   return local_state_.get();
 }
-=======
-// void CobaltBrowserMainParts::SetupMetrics() {
-//   metrics::MetricsService* metrics = GetMetricsService();
-//   metrics->InitializeMetricsRecordingState();
-// }
-
-// metrics::MetricsService* CobaltBrowserMainParts::GetMetricsService() {
-//   auto* metrics_services_manager = GetMetricsServicesManager();
-//   if (metrics_services_manager) {
-//     return metrics_services_manager->GetMetricsService();
-//   }
-//   return nullptr;
-// }
-
-// metrics_services_manager::MetricsServicesManager*
-// CobaltBrowserMainParts::GetMetricsServicesManager() {
-//   // // TODOD(joeltine): Can I check for teardown here like Chrome does:
-//   // //
-//   https://source.chromium.org/chromium/chromium/src/+/main:chrome/browser/browser_process_impl.cc;l=796;drc=87c3217dc3fec0f441b68f33d339b7f3a707b11d.
-//   // if (!metrics_services_manager_) {
-//   //   auto client = std::make_unique<CobaltMetricsServicesManagerClient>(
-//   //       local_state_.get());
-//   //   metrics_services_manager_client_ = client.get();
-//   //   metrics_services_manager_ =
-//   // std::make_unique<metrics_services_manager::MetricsServicesManager>(
-//   //           std::move(client));
-//   // }
-//   // return metrics_services_manager_.get();
-//   return nullptr;
-// }
-
-// PrefService* CobaltBrowserMainParts::local_state() {
-//   if (!local_state_) {
-//     // No need to make `pref_registry` a member, `pref_service_` will keep a
-//     // reference to it.
-//     auto pref_registry = base::MakeRefCounted<PrefRegistrySimple>();
-//     metrics::MetricsService::RegisterPrefs(pref_registry.get());
-//     PrefServiceFactory pref_service_factory;
-//     // TODO(b/397929564): Investigate using a Chrome's memory-mapped file
-//     store
-//     // instead of in-memory.
-//     pref_service_factory.set_user_prefs(
-//         base::MakeRefCounted<InMemoryPrefStore>());
-
-//     local_state_ = pref_service_factory.Create(std::move(pref_registry));
-//   }
-
-//   return local_state_.get();
-// }
->>>>>>> 76d2d152582 (Initialize HangWatcher)
 
 #if BUILDFLAG(IS_ANDROIDTV)
 void CobaltBrowserMainParts::PostCreateThreads() {

@@ -121,60 +121,6 @@ blink::UserAgentMetadata GetCobaltUserAgentMetadata() {
   return metadata;
 }
 
-// In content browser tests we allow more than one ShellContentBrowserClient
-// to be created (actually, ContentBrowserTestContentBrowserClient). Any state
-// needed should be added here so that it's shared between the instances.
-// struct SharedState {
-//   SharedState() {
-// #if BUILDFLAG(IS_MAC)
-//     location_manager = std::make_unique<device::FakeGeolocationManager>();
-//     location_manager->SetSystemPermission(
-//         device::LocationSystemPermissionStatus::kAllowed);
-// #endif
-//   }
-
-// #if BUILDFLAG(IS_MAC)
-//   std::unique_ptr<device::FakeGeolocationManager> location_manager;
-// #endif
-
-//   // Owned by content::BrowserMainLoop.
-//   raw_ptr<CobaltBrowserMainParts, DanglingUntriaged>
-//   cobalt_browser_main_parts =
-//       nullptr;
-
-//   std::unique_ptr<PrefService> local_state;
-// };
-
-// SharedState& GetSharedState() {
-//   static SharedState* g_shared_state = nullptr;
-//   if (!g_shared_state) {
-//     g_shared_state = new SharedState();
-//   }
-//   return *g_shared_state;
-// }
-
-void CobaltContentBrowserClient::CreateExperimentConfig() {
-  if (!local_state_) {
-    auto pref_registry = base::MakeRefCounted<PrefRegistrySimple>();
-
-    metrics::MetricsService::RegisterPrefs(pref_registry.get());
-    variations::VariationsService::RegisterPrefs(pref_registry.get());
-
-    base::FilePath path;
-    CHECK(base::PathService::Get(content::SHELL_DIR_USER_DATA, &path));
-    path = path.AppendASCII("Experiment Config");
-
-    LOG(INFO) << "CreateExperimentConfig() path is: " << path;
-
-    PrefServiceFactory pref_service_factory;
-    pref_service_factory.set_user_prefs(
-        base::MakeRefCounted<JsonPrefStore>(path));
-
-    local_state_ = pref_service_factory.Create(pref_registry);
-  }
-  // return local_state_;
-}
-
 CobaltContentBrowserClient::CobaltContentBrowserClient()
     : video_geometry_setter_service_(
           std::unique_ptr<cobalt::media::VideoGeometrySetterService,
@@ -182,36 +128,6 @@ CobaltContentBrowserClient::CobaltContentBrowserClient()
               nullptr,
               base::OnTaskRunnerDeleter(nullptr))) {
   DETACH_FROM_THREAD(thread_checker_);
-}
-// In content browser tests we allow more than one ShellContentBrowserClient
-// to be created (actually, ContentBrowserTestContentBrowserClient). Any state
-// needed should be added here so that it's shared between the instances.
-struct SharedState {
-  SharedState() {
-#if BUILDFLAG(IS_MAC)
-    location_manager = std::make_unique<device::FakeGeolocationManager>();
-    location_manager->SetSystemPermission(
-        device::LocationSystemPermissionStatus::kAllowed);
-#endif
-  }
-
-#if BUILDFLAG(IS_MAC)
-  std::unique_ptr<device::FakeGeolocationManager> location_manager;
-#endif
-
-  // Owned by content::BrowserMainLoop.
-  raw_ptr<CobaltBrowserMainParts, DanglingUntriaged> cobalt_browser_main_parts =
-      nullptr;
-
-  std::unique_ptr<PrefService> local_state;
-};
-
-SharedState& GetSharedState() {
-  static SharedState* g_shared_state = nullptr;
-  if (!g_shared_state) {
-    g_shared_state = new SharedState();
-  }
-  return *g_shared_state;
 }
 
 CobaltContentBrowserClient::~CobaltContentBrowserClient() = default;
