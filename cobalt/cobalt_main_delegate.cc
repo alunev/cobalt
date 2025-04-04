@@ -86,6 +86,8 @@ absl::optional<int> CobaltMainDelegate::PostEarlyInitialization(
 }
 
 void CobaltMainDelegate::CommonEarlyInitialization() {
+  LOG(INFO) << "CobaltMainDelegate::CommonEarlyInitialization()";
+
   const base::CommandLine* const command_line =
       base::CommandLine::ForCurrentProcess();
   std::string process_type =
@@ -105,6 +107,7 @@ void CobaltMainDelegate::CommonEarlyInitialization() {
   } else {
     hang_watcher_process_type = base::HangWatcher::ProcessType::kUnknownProcess;
   }
+
   base::HangWatcher::InitializeOnMainThread(hang_watcher_process_type);
 }
 

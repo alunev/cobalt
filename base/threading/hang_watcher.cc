@@ -189,13 +189,13 @@ constexpr base::FeatureParam<int> kGPUProcessThreadPoolLogLevel{
 // Renderer process.
 constexpr base::FeatureParam<int> kRendererProcessIOThreadLogLevel{
     &kEnableHangWatcher, "renderer_process_io_thread_log_level",
-    static_cast<int>(LoggingLevel::kUmaOnly)};
+    static_cast<int>(LoggingLevel::kUmaAndCrash)};
 constexpr base::FeatureParam<int> kRendererProcessMainThreadLogLevel{
     &kEnableHangWatcher, "renderer_process_main_thread_log_level",
-    static_cast<int>(LoggingLevel::kUmaOnly)};
+    static_cast<int>(LoggingLevel::kUmaAndCrash)};
 constexpr base::FeatureParam<int> kRendererProcessThreadPoolLogLevel{
     &kEnableHangWatcher, "renderer_process_threadpool_log_level",
-    static_cast<int>(LoggingLevel::kUmaOnly)};
+    static_cast<int>(LoggingLevel::kUmaAndCrash)};
 
 // Utility process.
 constexpr base::FeatureParam<int> kUtilityProcessIOThreadLogLevel{
@@ -319,12 +319,17 @@ WatchHangsInScope::~WatchHangsInScope() {
 
 // static
 void HangWatcher::InitializeOnMainThread(ProcessType process_type) {
+  LOG(INFO) << "HangWatcher::InitializeOnMainThread()";
+  LOG(INFO) << "process_type: " << static_cast<int>(process_type);
+
   DCHECK(!g_use_hang_watcher);
   DCHECK(g_io_thread_log_level == LoggingLevel::kNone);
   DCHECK(g_main_thread_log_level == LoggingLevel::kNone);
   DCHECK(g_threadpool_log_level == LoggingLevel::kNone);
 
   bool enable_hang_watcher = base::FeatureList::IsEnabled(kEnableHangWatcher);
+
+  LOG(INFO) << "enable_hang_watcher: " << enable_hang_watcher;
 
   // Do not start HangWatcher in the GPU process until the issue related to
   // invalid magic signature in the GPU WatchDog is fixed
