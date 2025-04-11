@@ -57,6 +57,8 @@ void StarboardRendererClient::Initialize(
     media::MediaResource* media_resource,
     media::RendererClient* client,
     media::PipelineStatusCallback init_cb) {
+  LOG(INFO) << "StarboardRendererClient::Initialize()";
+
   DCHECK(media_task_runner_->RunsTasksInCurrentSequence());
 
   // Consume and bind the delayed PendingRemote and PendingReceiver now that

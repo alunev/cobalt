@@ -81,6 +81,12 @@ void LogHungThreadCountHistogram(HangWatcher::ThreadType thread_type,
               "IOThread",
               any_thread_hung);
           break;
+        case HangWatcher::ThreadType::kRendererThread:
+          UMA_HISTOGRAM_BOOLEAN(
+              "HangWatcher.IsThreadHung.BrowserProcess."
+              "RendererThread",
+              any_thread_hung);
+          break;
         case HangWatcher::ThreadType::kMainThread:
           UMA_HISTOGRAM_BOOLEAN(
               "HangWatcher.IsThreadHung.BrowserProcess."
@@ -105,6 +111,9 @@ void LogHungThreadCountHistogram(HangWatcher::ThreadType thread_type,
               "IOThread",
               any_thread_hung);
           break;
+        case HangWatcher::ThreadType::kRendererThread:
+          // Not recorded for now. This is used in single-process mode only.
+          break;
         case HangWatcher::ThreadType::kMainThread:
           UMA_HISTOGRAM_BOOLEAN(
               "HangWatcher.IsThreadHung.RendererProcess."
@@ -124,6 +133,9 @@ void LogHungThreadCountHistogram(HangWatcher::ThreadType thread_type,
               "HangWatcher.IsThreadHung.UtilityProcess."
               "IOThread",
               any_thread_hung);
+          break;
+        case HangWatcher::ThreadType::kRendererThread:
+          // Not recorded for now. This is used in single-process mode only.
           break;
         case HangWatcher::ThreadType::kMainThread:
           UMA_HISTOGRAM_BOOLEAN(
@@ -151,6 +163,9 @@ bool ThreadTypeLoggingLevelGreaterOrEqual(HangWatcher::ThreadType thread_type,
       return g_main_thread_log_level.load(std::memory_order_relaxed) >=
              logging_level;
     case HangWatcher::ThreadType::kThreadPoolThread:
+      return g_threadpool_log_level.load(std::memory_order_relaxed) >=
+             logging_level;
+    case HangWatcher::ThreadType::kRendererThread:
       return g_threadpool_log_level.load(std::memory_order_relaxed) >=
              logging_level;
   }
@@ -651,6 +666,8 @@ void HangWatcher::RecordHang() {
 
 ScopedClosureRunner HangWatcher::RegisterThreadInternal(
     ThreadType thread_type) {
+  LOG(INFO) << "RegisterThreadInternal(), thread_type: " << static_cast<int>(thread_type);
+
   AutoLock auto_lock(watch_state_lock_);
   CHECK(base::FeatureList::GetInstance());
 
@@ -669,6 +686,8 @@ ScopedClosureRunner HangWatcher::RegisterThreadInternal(
 
 // static
 ScopedClosureRunner HangWatcher::RegisterThread(ThreadType thread_type) {
+  LOG(INFO) << "RegisterThread(), thread_type: " << static_cast<int>(thread_type);
+
   if (!GetInstance()) {
     return ScopedClosureRunner();
   }
@@ -989,6 +1008,10 @@ void HangWatcher::BlockIfCaptureInProgress() {
 }
 
 void HangWatcher::UnregisterThread() {
+  const HangWatcher::ProcessType process_type =
+      g_hang_watcher_process_type.load(std::memory_order_relaxed);
+  LOG(INFO) << "UnregisterThread(): process" << static_cast<int>(process_type);
+
   AutoLock auto_lock(watch_state_lock_);
 
   auto it = ranges::find(

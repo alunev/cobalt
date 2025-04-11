@@ -645,6 +645,8 @@ int NO_STACK_PROTECTOR RunZygote(ContentMainDelegate* delegate) {
   std::string process_type =
       command_line->GetSwitchValueASCII(switches::kProcessType);
 
+  LOG(INFO) << "RunZygote()" << "process_type:" << process_type;
+
   base::allocator::PartitionAllocSupport::Get()->ReconfigureAfterZygoteFork(
       process_type);
 
@@ -714,6 +716,9 @@ int NO_STACK_PROTECTOR
 RunOtherNamedProcessTypeMain(const std::string& process_type,
                              MainFunctionParams main_function_params,
                              ContentMainDelegate* delegate) {
+LOG(INFO) << "RunOtherNamedProcessTypeMain(), process_type: " << process_type;
+LOG(INFO) << "main_function_params: (command_line: " << main_function_params.command_line->GetCommandLineString() << ")";
+
 #if BUILDFLAG(IS_MAC)
   base::Process::SetCurrentTaskDefaultRole();
 #endif
@@ -732,6 +737,7 @@ RunOtherNamedProcessTypeMain(const std::string& process_type,
 
   // The hang watcher needs to be started once the feature list is available
   // but before the IO thread is started.
+  LOG(INFO) << "base::HangWatcher::IsEnabled(): " << base::HangWatcher::IsEnabled();
   base::ScopedClosureRunner unregister_thread_closure;
   if (base::HangWatcher::IsEnabled()) {
     base::HangWatcher::CreateHangWatcherInstance();
@@ -1060,6 +1066,10 @@ int NO_STACK_PROTECTOR ContentMainRunnerImpl::Run() {
   DCHECK(is_initialized_);
   DCHECK(content_main_params_);
   DCHECK(!is_shutdown_);
+
+  LOG(INFO) << "ContentMainRunnerImpl:Run()";
+
+
   const base::CommandLine* command_line =
       base::CommandLine::ForCurrentProcess();
   std::string process_type =

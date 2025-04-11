@@ -565,6 +565,8 @@ RenderThreadImpl::RenderThreadImpl(
 }
 
 void RenderThreadImpl::Init() {
+  LOG(INFO) << "RenderThreadImpl::Init()";
+
   TRACE_EVENT0("startup", "RenderThreadImpl::Init");
 
   SCOPED_UMA_HISTOGRAM_TIMER("Renderer.RenderThreadImpl.Init");

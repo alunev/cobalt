@@ -53,6 +53,8 @@ CobaltMainDelegate::CreateContentRendererClient() {
 
 absl::optional<int> CobaltMainDelegate::PostEarlyInitialization(
     InvokedIn invoked_in) {
+  LOG(INFO) << "CobaltMainDelegate::PostEarlyInitialization()";
+
   content::RenderFrameHost::AllowInjectingJavaScript();
 
   if (!ShouldCreateFeatureList(invoked_in)) {

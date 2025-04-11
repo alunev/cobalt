@@ -4,6 +4,7 @@
 
 #include "content/renderer/in_process_renderer_thread.h"
 
+#include "base/threading/hang_watcher.h" // Add this include
 #include "build/build_config.h"
 #include "content/public/common/content_client.h"
 #include "content/public/renderer/content_renderer_client.h"
@@ -31,6 +32,8 @@ InProcessRendererThread::~InProcessRendererThread() {
 }
 
 void InProcessRendererThread::Init() {
+  LOG(INFO) << "InProcessRendererThread::Init()";
+
   // In single-process mode, we never enter the sandbox, so run the post-sandbox
   // code now.
   content::ContentRendererClient* client = GetContentClient()->renderer();
@@ -48,6 +51,19 @@ void InProcessRendererThread::Init() {
   // Android. Temporary CHECK() to debug http://crbug.com/514141
   CHECK(!render_process_);
 #endif
+
+  // --- HANG WATCHER REGISTRATION ---
+  // Register this thread for hang watching. It will automatically unregister
+  // when the thread exits (via the ScopedClosureRunner).
+  LOG(INFO) << "HangWatcher::IsEnabled(): " << base::HangWatcher::IsEnabled();
+
+  if (base::HangWatcher::IsEnabled() && base::HangWatcher::GetInstance()) {
+      // Use kRendererThread as the type for this in-process renderer thread.
+      unregister_thread_closure = base::HangWatcher::RegisterThread(
+          base::HangWatcher::ThreadType::kRendererThread);
+  }
+  // --- END HANG WATCHER REGISTRATION ---
+
   blink::Platform::InitializeBlink();
   std::unique_ptr<blink::scheduler::WebThreadScheduler> main_thread_scheduler =
       blink::scheduler::WebThreadScheduler::CreateMainThreadScheduler();
@@ -61,6 +77,8 @@ void InProcessRendererThread::Init() {
 }
 
 void InProcessRendererThread::CleanUp() {
+  LOG(INFO) << "InProcessRendererThread::CleanUp()";
+
   render_process_.reset();
 
   // It's a little lame to manually set this flag.  But the single process
