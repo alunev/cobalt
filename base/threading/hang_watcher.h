@@ -257,7 +257,26 @@ class BASE_EXPORT HangWatcher : public DelegateSimpleThread::Delegate {
   // resume.
   std::string GetTimeSinceLastSystemPowerResumeCrashKeyValue() const;
 
+  // Interface for handling hang reports. Platform-specific implementations
+  // can be provided via SetHandler.
+  class BASE_EXPORT HangReportHandler {
+   public:
+    virtual ~HangReportHandler() = default;
+    virtual void OnHangDetected(const std::string& serialized_report) = 0;
+  };
+
+  // Sets the handler for hang reports. This should be called early in process
+  // startup by platform-specific code.
+  static void SetHandler(std::unique_ptr<HangReportHandler> handler);
+
+  // Reports a hang event to the Java layer.
+  static void ReportHangToJava();
+
  private:
+  // The global handler instance.
+  static std::unique_ptr<HangReportHandler> g_handler;
+
+  // See comment of ::RegisterThread() for details.
   // See comment of ::RegisterThread() for details.
   [[nodiscard]] ScopedClosureRunner RegisterThreadInternal(
       ThreadType thread_type) LOCKS_EXCLUDED(watch_state_lock_);

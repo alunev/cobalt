@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "base/android/jni_android.h"
+#include "base/logging.h"
 #include "starboard/extension/accessibility.h"
 
 #include "starboard/android/shared/file_internal.h"
@@ -72,6 +73,8 @@ ApplicationAndroid::ApplicationAndroid(
 
   JNIEnv* jni_env = base::android::AttachCurrentThread();
   app_start_timestamp_ = starboard_bridge_->GetAppStartTimestamp(jni_env);
+
+  LOG(ERROR) << "HELLO FROM COBALT ApplicationAndroid::ApplicationAndroid";
 
   starboard_bridge_->ApplicationStarted(jni_env);
 }

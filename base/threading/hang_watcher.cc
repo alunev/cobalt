@@ -34,6 +34,8 @@
 
 namespace base {
 
+#define HW_LOG(message) LOG(ERROR) << "HangWatcher DEBUG: " << message
+
 namespace {
 
 // Defines how much logging happens when the HangWatcher monitors the threads.
@@ -507,6 +509,8 @@ HangWatcher::HangWatcher()
           FROM_HERE,
           base::BindRepeating(&HangWatcher::OnMemoryPressure,
                               base::Unretained(this))) {
+  HW_LOG("Initialize");
+
   // |thread_checker_| should not be bound to the constructing thread.
   DETACH_FROM_THREAD(hang_watcher_thread_checker_);
 
@@ -592,6 +596,7 @@ HangWatcher::~HangWatcher() {
 }
 
 void HangWatcher::Start() {
+  HW_LOG("ThreadDelegate::Start");
   thread_.Start();
 }
 
@@ -684,6 +689,7 @@ void HangWatcher::Run() {
 
 // static
 HangWatcher* HangWatcher::GetInstance() {
+  HW_LOG("GetInstance");
   return g_instance;
 }
 
@@ -932,14 +938,18 @@ void HangWatcher::Monitor() {
 
 void HangWatcher::DoDumpWithoutCrashing(
     const WatchStateSnapShot& watch_state_snapshot) {
+  HW_LOG("DoDumpWithoutCrashing");
   TRACE_EVENT("base", "HangWatcher::DoDumpWithoutCrashing");
 
   capture_in_progress_.store(true, std::memory_order_relaxed);
+  HW_LOG("Capture in progress store done.");
   base::AutoLock scope_lock(capture_lock_);
+  HW_LOG("Capture lock acquired.");
 
 #if !BUILDFLAG(IS_NACL)
   const std::string list_of_hung_thread_ids =
       watch_state_snapshot.PrepareHungThreadListCrashKey();
+  HW_LOG("List of hung thread ids: " << list_of_hung_thread_ids);
 
   static debug::CrashKeyString* crash_key = AllocateCrashKeyString(
       "list-of-hung-threads", debug::CrashKeySize::Size256);
@@ -953,6 +963,7 @@ void HangWatcher::DoDumpWithoutCrashing(
 
   SCOPED_CRASH_KEY_STRING32("HangWatcher", "seconds-since-last-resume",
                             GetTimeSinceLastSystemPowerResumeCrashKeyValue());
+  HW_LOG("Crash keys set.");
 #endif
 
   // To avoid capturing more than one hang that blames a subset of the same
@@ -975,16 +986,27 @@ void HangWatcher::DoDumpWithoutCrashing(
   // are now after L and a second hang can be recorded.
   base::TimeTicks latest_expired_deadline =
       watch_state_snapshot.GetHighestDeadline();
+  HW_LOG("Latest expired deadline: " << latest_expired_deadline);
 
-  if (on_hang_closure_for_testing_)
+#if BUILDFLAG(IS_ANDROID) && BUILDFLAG(IS_COBALT)
+  HW_LOG("Reporting hang to Java.");
+  HangWatcher::ReportHangToJava();
+#endif
+
+  if (on_hang_closure_for_testing_) {
+    HW_LOG("Running on_hang_closure_for_testing.");
     on_hang_closure_for_testing_.Run();
-  else
+  } else {
+    HW_LOG("Recording hang.");
     RecordHang();
+  }
 
   // Update after running the actual capture.
   deadline_ignore_threshold_ = latest_expired_deadline;
+  HW_LOG("Deadline ignore threshold updated.");
 
   capture_in_progress_.store(false, std::memory_order_relaxed);
+  HW_LOG("Capture in progress store done.");
 }
 
 void HangWatcher::SetAfterMonitorClosureForTesting(
@@ -1329,5 +1351,24 @@ PlatformThreadId HangWatchState::GetThreadID() const {
 }
 
 }  // namespace internal
+
+std::unique_ptr<HangWatcher::HangReportHandler> HangWatcher::g_handler;
+
+// static
+void HangWatcher::SetHandler(std::unique_ptr<HangReportHandler> handler) {
+  g_handler = std::move(handler);
+}
+
+// static
+void HangWatcher::ReportHangToJava() {
+  if (g_handler) {
+    // Replace with actual NativeHangReport proto serialization.
+    const std::string stub_report = "STUB_HANG_REPORT_FROM_COBALT";
+    g_handler->OnHangDetected(stub_report);
+    HW_LOG("ReportHangToJava: Called OnHangDetected.");
+  } else {
+    HW_LOG("ReportHangToJava: No handler set.");
+  }
+}
 
 }  // namespace base
