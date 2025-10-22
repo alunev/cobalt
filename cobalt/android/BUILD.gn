@@ -1,6 +1,7 @@
 import("//build/config/android/config.gni")
 import("//build/config/android/rules.gni")
 import("//starboard/build/buildflags.gni")
+import("//testing/test.gni")
 import("//third_party/icu/config.gni")
 
 cobalt_manifest = "$target_gen_dir/cobalt_manifest/AndroidManifest.xml"
@@ -15,6 +16,7 @@ generate_jni("jni_headers") {
   sources = [
     "apk/app/src/main/java/dev/cobalt/coat/CobaltActivity.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltTextToSpeechHelper.java",
+    "apk/app/src/main/java/dev/cobalt/coat/MinidumpParser.java",
     "apk/app/src/main/java/dev/cobalt/coat/StarboardBridge.java",
     "apk/app/src/main/java/dev/cobalt/media/MediaCodecBridge.java",
     "apk/app/src/main/java/dev/cobalt/media/MediaDrmBridge.java",
@@ -39,6 +41,7 @@ android_library("cobalt_main_java") {
     "//cobalt/shell/android:cobalt_shell_java",
     "//cobalt/shell/android:cobalt_shell_java_resources",
     "//cobalt/shell/android:cobalt_shell_jni_headers",
+    "//components/crash/android:java",
     "//components/version_info/android:version_constants_java",
     "//content/public/android:content_java",
     "//media/capture/video/android:capture_java",
@@ -87,6 +90,8 @@ android_library("cobalt_main_java") {
     "apk/app/src/main/java/dev/cobalt/coat/CrashContext.java",
     "apk/app/src/main/java/dev/cobalt/coat/CrashContextUpdateHandler.java",
     "apk/app/src/main/java/dev/cobalt/coat/ErrorDialog.java",
+    "apk/app/src/main/java/dev/cobalt/coat/MinidumpParser.java",
+    "apk/app/src/main/java/dev/cobalt/coat/NativeHangReportHandler.java",
     "apk/app/src/main/java/dev/cobalt/coat/NetworkStatus.java",
     "apk/app/src/main/java/dev/cobalt/coat/NullCobaltFactory.java",
     "apk/app/src/main/java/dev/cobalt/coat/PlatformError.java",
@@ -191,9 +196,18 @@ shared_library("libchrobalt") {
     ]
   }
   sources = [
+    "//cobalt/app/cobalt_crash_reporter_client.cc",
+    "//cobalt/app/cobalt_crash_reporter_client.h",
     "//cobalt/app/cobalt_main_delegate.cc",
     "//cobalt/app/cobalt_main_delegate.h",
+    "//cobalt/crash/minidump_parser.cc",
+    "//cobalt/crash/minidump_parser_jni.cc",
     "cobalt_library_loader.cc",
+  ]
+  deps += [
+    "//third_party/crashpad/crashpad/minidump:format",
+    "//third_party/crashpad/crashpad/snapshot",
+    "//third_party/crashpad/crashpad/util",
   ]
   configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
   configs += [ "//build/config/android:hide_all_but_jni" ]
@@ -212,6 +226,8 @@ android_apk("cobalt_apk") {
     ":cobalt_apk_java",
     "//cobalt/shell/android:cobalt_shell_assets",
     "//cobalt/shell/android:cobalt_shell_java",
+    "//components/crash/android:java",
+    "//components/crash/core/app:chrome_crashpad_handler_named_as_so",
     "//components/metrics:metrics_java",
     "//content/public/android:content_java",
     "//media/capture/video/android:capture_java",
@@ -219,6 +235,12 @@ android_apk("cobalt_apk") {
     "//third_party/mesa_headers",
     "//ui/android:ui_java",
   ]
+
+  # This is the packaging strategy used by Chrome on Android L through M. In a
+  # production implementation we should consider the N through P or Q+
+  # approaches described in docs/android_native_libraries.md.
+  loadable_modules = [ "$root_out_dir/libchrome_crashpad_handler.so" ]
+
   shared_libraries = [ ":libchrobalt" ]
   include_size_info = is_official_build
 }

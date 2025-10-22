@@ -77,6 +77,8 @@ source_set("common") {
   testonly = true
 
   sources = [
+    "app/cobalt_crash_reporter_client.cc",
+    "app/cobalt_crash_reporter_client.h",
     "app/cobalt_main_delegate.cc",
     "app/cobalt_main_delegate.h",
   ]
@@ -196,4 +198,33 @@ test("cobalt_unittests") {
   if (!is_android) {
     deps += [ "//ui/ozone:ozone_switches" ]
   }
+}
+
+config("ignore_static_destructor_warnings") {
+  cflags = [
+    "-Wno-exit-time-destructors",
+    "-Wno-global-constructors",
+  ]
+}
+
+test("minidump_parser_test_host") {
+  testonly = true
+  sources = [
+    "//cobalt/crash/minidump_parser.cc",
+    "//cobalt/crash/minidump_parser_unittest.cc",
+  ]
+  deps = [
+    "//base",
+    "//base/test:run_all_unittests",
+    "//testing/gtest",
+    "//third_party/breakpad:processor_support",
+    "//third_party/crashpad/crashpad/minidump:format",
+    "//third_party/crashpad/crashpad/snapshot",
+    "//third_party/crashpad/crashpad/util",
+  ]
+  data = [ "//cobalt/crash/testdata/minidump_parser_test.dmp" ]
+
+  configs += [ ":ignore_static_destructor_warnings" ]
+
+  include_dirs = [ "//third_party/breakpad/breakpad/src" ]
 }

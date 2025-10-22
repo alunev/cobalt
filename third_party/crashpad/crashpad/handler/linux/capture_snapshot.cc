@@ -32,12 +32,15 @@ bool CaptureSnapshot(
     pid_t* requesting_thread_id,
     std::unique_ptr<ProcessSnapshotLinux>* snapshot,
     std::unique_ptr<ProcessSnapshotSanitized>* sanitized_snapshot) {
+  LOG(ERROR) << "Crashpad DEBUG: CaptureSnapshot called.";
   std::unique_ptr<ProcessSnapshotLinux> process_snapshot(
       new ProcessSnapshotLinux());
   if (!process_snapshot->Initialize(connection)) {
+    LOG(ERROR) << "Crashpad DEBUG: process_snapshot->Initialize failed.";
     Metrics::ExceptionCaptureResult(Metrics::CaptureResult::kSnapshotFailed);
     return false;
   }
+  LOG(ERROR) << "Crashpad DEBUG: process_snapshot->Initialize succeeded.";
 
   pid_t local_requesting_thread_id = -1;
   if (requesting_thread_stack_address) {

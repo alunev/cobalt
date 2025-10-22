@@ -17,6 +17,8 @@
                 "lib.unstripped/libchrobalt.so",
                 "libchrobalt.so",
                 "libstarboard_jni_state.so",
+                "libchrome_crashpad_handler.so",
+                "obj/cobalt/shell/android/cobalt_shell_java_resources.resources.zip",
                 "obj/components/metrics/metrics_java.javac.jar",
                 "obj/third_party/android_deps/chromium_play_services_availability_java.javac.jar",
                 "lib.java/base/android/jni_generator/jni_processor.jar",
@@ -36,6 +38,7 @@
                 "lib.java/components/attribution_reporting/registration_mojom_java.jar",
                 "lib.java/components/content_settings/core/common/mojo_bindings_java.jar",
                 "lib.java/components/digital_goods/mojom/mojom_java.jar",
+                "lib.java/components/minidump_uploader/minidump_uploader_java.jar",
                 "lib.java/components/download/internal/common/internal_java.jar",
                 "lib.java/components/download/public/common/public_java.jar",
                 "lib.java/components/location/android/location_java.jar",
@@ -294,6 +297,10 @@
                 {
                     "from_file": "lib.java/components/digital_goods/mojom/mojom_java.jar",
                     "to_file": "jar/components_digital_goods_mojom_mojom_java.jar"
+                },
+                {
+                    "from_file": "lib.java/components/minidump_uploader/minidump_uploader_java.jar",
+                    "to_file": "jar/components_minidump_uploader_minidump_uploader_java.jar"
                 },
                 {
                     "from_file": "lib.java/components/download/internal/common/internal_java.jar",

@@ -5,6 +5,7 @@
 #include "base/debug/dump_without_crashing.h"
 
 #include "base/check.h"
+#include "base/logging.h"
 #include "base/metrics/histogram_functions.h"
 #include "base/no_destructor.h"
 #include "base/synchronization/lock.h"
@@ -80,9 +81,12 @@ namespace debug {
 bool DumpWithoutCrashingUnthrottled() {
   TRACE_EVENT0("base", "DumpWithoutCrashingUnthrottled");
   if (dump_without_crashing_function_) {
+    LOG(ERROR) << "Crashpad DEBUG: Calling dump_without_crashing_function_";
     (*dump_without_crashing_function_)();
+    LOG(ERROR) << "Crashpad DEBUG: Returned from dump_without_crashing_function_";
     return true;
   }
+  LOG(ERROR) << "Crashpad DEBUG: dump_without_crashing_function_ is null";
   return false;
 }
 

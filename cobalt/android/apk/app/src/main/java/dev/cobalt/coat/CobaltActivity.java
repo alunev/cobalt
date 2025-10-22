@@ -151,6 +151,37 @@ public abstract class CobaltActivity extends Activity {
       getStarboardBridge().handleDeepLink(startDeepLink);
     }
 
+    // Check for pending minidumps and parse them for testing.
+    new Thread(() -> {
+        try {
+            java.io.File crashDir = new java.io.File("/data/data/dev.cobalt.coat/cache/crashpad/pending");
+            if (crashDir.exists() && crashDir.isDirectory()) {
+                java.io.File[] files = crashDir.listFiles((dir, name) -> name.endsWith(".dmp"));
+                if (files != null) {
+                    for (java.io.File file : files) {
+                        Log.e(TAG, "Found pending minidump: " + file.getAbsolutePath());
+                        try {
+                            String[] traces = MinidumpParser.getStackTraces(file.getAbsolutePath());
+                            if (traces != null && traces.length > 0) {
+                                for (String trace : traces) {
+                                    Log.e(TAG, "Parsed Stack Trace:\n" + trace);
+                                }
+                            } else {
+                                Log.e(TAG, "Parsed Stack Trace is empty or null.");
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Failed to parse minidump: " + e.getMessage());
+                        }
+                    }
+                }
+            } else {
+                Log.e(TAG, "Pending crash directory does not exist or is not a directory.");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking for minidumps: " + e.getMessage());
+        }
+    }).start();
+
     mShellManager = new ShellManager(this);
     final boolean listenToActivityState = true;
     mIntentRequestTracker = IntentRequestTracker.createFromActivity(this);

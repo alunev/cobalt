@@ -570,6 +570,11 @@ int HandlerMain(int argc,
                 const UserStreamDataSources* user_stream_sources) {
   InitCrashpadLogging();
 
+  LOG(ERROR) << "Crashpad DEBUG: HandlerMain argc: " << argc;
+  for (int i = 0; i < argc; ++i) {
+    LOG(ERROR) << "Crashpad DEBUG: HandlerMain argv[" << i << "]: " << argv[i];
+  }
+
   InstallCrashHandler();
   CallMetricsRecordNormalExit metrics_record_normal_exit;
 
@@ -741,7 +746,9 @@ int HandlerMain(int argc,
 #endif
 
   int opt;
+  LOG(ERROR) << "Crashpad DEBUG: Before getopt_long loop";
   while ((opt = getopt_long(argc, argv, "", long_options, nullptr)) != -1) {
+    LOG(ERROR) << "Crashpad DEBUG: getopt_long returned " << opt;
     switch (opt) {
       case kOptionAnnotation: {
         if (!AddKeyValueToMap(&options.annotations, optarg, "--annotation")) {
@@ -918,6 +925,7 @@ int HandlerMain(int argc,
   }
   argc -= optind;
   argv += optind;
+  LOG(ERROR) << "Crashpad DEBUG: After getopt_long loop";
 
 #if BUILDFLAG(IS_APPLE)
   if (options.handshake_fd < 0 && options.mach_service.empty()) {
@@ -986,6 +994,7 @@ int HandlerMain(int argc,
   }
 #endif  // BUILDFLAG(IS_APPLE)
 
+  LOG(ERROR) << "Crashpad DEBUG: Before MonitorSelf";
   if (options.monitor_self) {
     MonitorSelf(options);
   }
@@ -1010,14 +1019,19 @@ int HandlerMain(int argc,
     }
   }
 
+  LOG(ERROR) << "Crashpad DEBUG: Initializing database";
   std::unique_ptr<CrashReportDatabase> database(
       CrashReportDatabase::Initialize(options.database));
+  LOG(ERROR) << "Crashpad DEBUG: Database initialization result: " << !!database;
   if (!database) {
     return ExitFailure();
   }
 
+  LOG(ERROR) << "Crashpad DEBUG: Before upload thread creation";
   ScopedStoppable upload_thread;
+  LOG(ERROR) << "Crashpad DEBUG: Upload URL: " << options.url;
   if (!options.url.empty()) {
+    LOG(ERROR) << "Crashpad DEBUG: URL not empty, creating upload thread.";
     // TODO(scottmg): options.rate_limit should be removed when we have a
     // configurable database setting to control upload limiting.
     // See https://crashpad.chromium.org/bug/23.
@@ -1033,7 +1047,9 @@ int HandlerMain(int argc,
         options.url,
         upload_thread_options,
         CrashReportUploadThread::ProcessPendingReportsObservationCallback()));
+    LOG(ERROR) << "Crashpad DEBUG: Upload thread created, starting...";
     upload_thread.Get()->Start();
+    LOG(ERROR) << "Crashpad DEBUG: Upload thread start called.";
   }
 
 #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
@@ -1191,6 +1207,7 @@ int HandlerMain(int argc,
   }
 #endif  // BUILDFLAG(IS_WIN)
 
+  LOG(ERROR) << "Crashpad DEBUG: Starting exception handler server";
   exception_handler_server.Run(exception_handler.get());
 
   return EXIT_SUCCESS;

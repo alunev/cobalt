@@ -34,6 +34,8 @@
 
 namespace base {
 
+#define HW_LOG(message) LOG(ERROR) << "HangWatcher DEBUG: " << message
+
 namespace {
 
 // Defines how much logging happens when the HangWatcher monitors the threads.
@@ -507,6 +509,8 @@ HangWatcher::HangWatcher()
           FROM_HERE,
           base::BindRepeating(&HangWatcher::OnMemoryPressure,
                               base::Unretained(this))) {
+  HW_LOG("Initialize");
+
   // |thread_checker_| should not be bound to the constructing thread.
   DETACH_FROM_THREAD(hang_watcher_thread_checker_);
 
@@ -544,7 +548,7 @@ HangWatcher::GetTimeSinceLastCriticalMemoryPressureCrashKey() {
   if (last_critical_memory_pressure_time.is_null()) {
     constexpr char kNoMemoryPressureMsg[] = "No critical memory pressure";
     static_assert(
-        std::size(kNoMemoryPressureMsg) <=
+        std::size(kNoMemoryPressureMsg) <= 
             static_cast<uint64_t>(kCrashKeyContentSize),
         "The crash key is too small to hold \"No critical memory pressure\".");
     return debug::ScopedCrashKeyString(crash_key, kNoMemoryPressureMsg);
@@ -592,6 +596,7 @@ HangWatcher::~HangWatcher() {
 }
 
 void HangWatcher::Start() {
+  HW_LOG("ThreadDelegate::Start");
   thread_.Start();
 }
 
@@ -684,6 +689,7 @@ void HangWatcher::Run() {
 
 // static
 HangWatcher* HangWatcher::GetInstance() {
+  HW_LOG("GetInstance");
   return g_instance;
 }
 
@@ -816,7 +822,7 @@ void HangWatcher::WatchStateSnapShot::Init(
       // in the capture at that time.
       if (thread_marked && all_threads_marked) {
         hung_watch_state_copies_.push_back(
-            WatchStateCopy{deadline, watch_state.get()->GetThreadID()});
+            WatchStateCopy{deadline, watch_state->GetThreadID(), watch_state->thread_type()});
       } else {
         all_threads_marked = false;
       }
@@ -932,14 +938,18 @@ void HangWatcher::Monitor() {
 
 void HangWatcher::DoDumpWithoutCrashing(
     const WatchStateSnapShot& watch_state_snapshot) {
+  HW_LOG("DoDumpWithoutCrashing");
   TRACE_EVENT("base", "HangWatcher::DoDumpWithoutCrashing");
 
   capture_in_progress_.store(true, std::memory_order_relaxed);
+  HW_LOG("Capture in progress store done.");
   base::AutoLock scope_lock(capture_lock_);
+  HW_LOG("Capture lock acquired.");
 
 #if !BUILDFLAG(IS_NACL)
   const std::string list_of_hung_thread_ids =
       watch_state_snapshot.PrepareHungThreadListCrashKey();
+  HW_LOG("List of hung thread ids: " << list_of_hung_thread_ids);
 
   static debug::CrashKeyString* crash_key = AllocateCrashKeyString(
       "list-of-hung-threads", debug::CrashKeySize::Size256);
@@ -953,6 +963,7 @@ void HangWatcher::DoDumpWithoutCrashing(
 
   SCOPED_CRASH_KEY_STRING32("HangWatcher", "seconds-since-last-resume",
                             GetTimeSinceLastSystemPowerResumeCrashKeyValue());
+  HW_LOG("Crash keys set.");
 #endif
 
   // To avoid capturing more than one hang that blames a subset of the same
@@ -962,8 +973,8 @@ void HangWatcher::DoDumpWithoutCrashing(
   // discovered hang is not directly related.
   // Example:
   // **********************************************************************
-  // Timeline A : L------1-------2----------3-------4----------N-----------
-  // Timeline B : -------2----------3-------4----------L----5------N-------
+  // Timeline A : L------1-------2----------3-------4----------N           
+  // Timeline B : -------2----------3-------4----------L----5------N       
   // Timeline C : L----------------------------5------6----7---8------9---N
   // **********************************************************************
   // In the example when a Monitor() happens during timeline A
@@ -975,16 +986,46 @@ void HangWatcher::DoDumpWithoutCrashing(
   // are now after L and a second hang can be recorded.
   base::TimeTicks latest_expired_deadline =
       watch_state_snapshot.GetHighestDeadline();
+  HW_LOG("Latest expired deadline: " << latest_expired_deadline);
 
-  if (on_hang_closure_for_testing_)
+#if BUILDFLAG(IS_ANDROID) && BUILDFLAG(IS_COBALT)
+  // HW_LOG("Reporting hang to Java.");
+  // HangWatcher::ReportHangToJava(watch_state_snapshot);
+  HW_LOG("SKIP Reporting hang to Java.");
+#endif
+
+  if (on_hang_closure_for_testing_) {
+    HW_LOG("Running on_hang_closure_for_testing.");
     on_hang_closure_for_testing_.Run();
-  else
+    HW_LOG("Finished running on_hang_closure_for_testing.");
+  } else {
+    HW_LOG("Recording hang.");
     RecordHang();
+    HW_LOG("Finished recording hang.");
+  }
 
   // Update after running the actual capture.
   deadline_ignore_threshold_ = latest_expired_deadline;
+  HW_LOG("Deadline ignore threshold updated.");
 
   capture_in_progress_.store(false, std::memory_order_relaxed);
+  HW_LOG("Capture in progress store done.");
+}
+
+std::string ThreadTypeToString(HangWatcher::ThreadType type) {
+  switch (type) {
+    case HangWatcher::ThreadType::kIOThread:
+      return "IO";
+    case HangWatcher::ThreadType::kMainThread:
+      return "MAIN";
+    case HangWatcher::ThreadType::kThreadPoolThread:
+      return "WORKER";
+#if BUILDFLAG(IS_COBALT)
+    case HangWatcher::ThreadType::kRendererThread:
+      return "RENDERER_MAIN";
+#endif
+  }
+  return "UNKNOWN";
 }
 
 void HangWatcher::SetAfterMonitorClosureForTesting(
@@ -1045,6 +1086,7 @@ void HangWatcher::UnregisterThread() {
 
   watch_states_.erase(it);
 }
+
 
 namespace internal {
 namespace {
@@ -1112,7 +1154,7 @@ void HangWatchDeadline::SetDeadline(TimeTicks new_deadline) {
   const uint64_t new_flags =
       ExtractFlags(old_bits & kPersistentFlagsAndDeadlineMask);
   bits_.store(new_flags | ExtractDeadline(static_cast<uint64_t>(
-                              new_deadline.ToInternalValue())),
+                              new_deadline.ToInternalValue())), 
               std::memory_order_relaxed);
 }
 
@@ -1330,4 +1372,4 @@ PlatformThreadId HangWatchState::GetThreadID() const {
 
 }  // namespace internal
 
-}  // namespace base
+} // namespace base

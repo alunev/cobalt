@@ -96,6 +96,7 @@ generate_jni("java_handler_jni_headers") {
 
 android_library("handler_java") {
   deps = [
+    ":java",
     "//base:jni_java",
     "//build/android:build_java",
   ]

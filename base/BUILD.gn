@@ -1400,12 +1400,12 @@ component("base") {
       "android/trace_event_binding.cc",
       "android/trace_event_binding.h",
     ]
-    deps += [ 
+    deps += [
       ":base_jni_headers",
       ":cobalt_for_google3_buildflags",
     ]
 
-    
+
   }  # is_android || is_robolectric
 
   # Chromeos.

@@ -28,6 +28,11 @@
 #include "content/public/common/content_switches.h"
 #include "gpu/command_buffer/service/gpu_switches.h"
 
+#if BUILDFLAG(IS_ANDROIDTV)
+#include "cobalt/app/cobalt_crash_reporter_client.h"
+#include "components/crash/core/app/crashpad.h"
+#endif
+
 namespace cobalt {
 
 CobaltMainDelegate::CobaltMainDelegate(bool is_content_browsertests)
@@ -128,6 +133,22 @@ absl::variant<int, content::MainFunctionParams> CobaltMainDelegate::RunProcess(
   // to the |ui_task| for browser tests.
   return 0;
 }
+
+#if BUILDFLAG(IS_ANDROIDTV)
+void CobaltMainDelegate::PreSandboxStartup() {
+  std::string process_type =
+      base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
+          switches::kProcessType);
+  CobaltCrashReporterClient::Create();
+  crash_reporter::InitializeCrashpad(process_type.empty(), process_type);
+
+  // For now we just want a minidump persisted in the on-device crash database.
+  // crash_reporter::SetUploadConsent(false);
+  LOG(ERROR) << "Crashpad DEBUG: Upload consent is ENABLED by default";
+
+  return content::ShellMainDelegate::PreSandboxStartup();
+}
+#endif
 
 void CobaltMainDelegate::Shutdown() {
   main_runner_->Shutdown();
