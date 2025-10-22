@@ -1,0 +1,104 @@
+// Copyright 2024 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "base/android/hang_report_handler_android.h"
+
+#include <jni.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "base/android/jni_android.h"
+#include "base/android/jni_array.h"
+#include "base/android/jni_string.h"
+#include "base/logging.h"
+#include "base/threading/hang_watcher.h"
+
+namespace base {
+namespace android {
+
+namespace {
+
+#define HW_LOG(message) LOG(ERROR) << "HangWatcher DEBUG: " << message
+
+class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
+ public:
+  AndroidHangReportHandler() = default;
+  ~AndroidHangReportHandler() override = default;
+
+  void OnHangDetected(const std::string& serialized_report) override {
+    HW_LOG("AndroidHangReportHandler::OnHangDetected - ENTRY");
+
+    JNIEnv* env = base::android::AttachCurrentThread();
+    if (!env) {
+      HW_LOG("AndroidHangReportHandler::OnHangDetected: Failed to get JNIEnv.");
+      return;
+    }
+
+    ScopedJavaLocalRef<jclass> util_class = base::android::GetClass(
+        env, "com/google/android/libraries/youtube/systemhealth/hangdetection/"
+        "NativeHangDetectorUtil");
+    if (!util_class) {
+      HW_LOG(
+          "AndroidHangReportHandler::OnHangDetected: Failed to find class "
+          "NativeHangDetectorUtil");
+      if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+      }
+      return;
+    }
+
+    jmethodID method_id = env->GetStaticMethodID(
+        util_class.obj(), "reportHangFromNative", "([B)V");
+    if (!method_id) {
+      HW_LOG(
+          "AndroidHangReportHandler::OnHangDetected: Failed to find method "
+          "reportHangFromNative with byte[] signature");
+      if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+      }
+      return;
+    }
+
+    // TODO(b/361779376): Replace with actual proto serialization.
+    // Create a dummy byte array for now.
+    std::vector<uint8_t> dummy_report = {0x08, 0x01, 0x12, 0x04, 'T', 'E', 'S', 'T', 0x18, 0xE8, 0x07};
+    ScopedJavaLocalRef<jbyteArray> j_report = base::android::ToJavaByteArray(env, dummy_report);
+
+    if (!j_report) {
+      HW_LOG(
+          "AndroidHangReportHandler::OnHangDetected: Failed to create jbyteArray "
+          "report");
+      if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+      }
+      return;
+    }
+
+    HW_LOG("AndroidHangReportHandler::OnHangDetected: Calling static method with byte[].");
+    env->CallStaticVoidMethod(util_class.obj(), method_id, j_report.obj());
+
+    if (env->ExceptionCheck()) {
+      HW_LOG("AndroidHangReportHandler::OnHangDetected: Exception occurred.");
+      env->ExceptionDescribe();
+      env->ExceptionClear();
+    }
+
+    HW_LOG("AndroidHangReportHandler::OnHangDetected: Finished JNI call.");
+  }
+};
+
+}  // namespace
+
+void InstallAndroidHangReportHandler() {
+  HW_LOG("InstallAndroidHangReportHandler");
+  base::HangWatcher::SetHandler(
+      std::make_unique<AndroidHangReportHandler>());
+}
+
+}  // namespace android
+}  // namespace base
