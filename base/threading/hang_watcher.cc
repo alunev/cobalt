@@ -822,7 +822,7 @@ void HangWatcher::WatchStateSnapShot::Init(
       // in the capture at that time.
       if (thread_marked && all_threads_marked) {
         hung_watch_state_copies_.push_back(
-            WatchStateCopy{deadline, watch_state.get()->GetThreadID()});
+            WatchStateCopy{deadline, watch_state->GetThreadID(), watch_state->thread_type()});
       } else {
         all_threads_marked = false;
       }
@@ -990,7 +990,7 @@ void HangWatcher::DoDumpWithoutCrashing(
 
 #if BUILDFLAG(IS_ANDROID) && BUILDFLAG(IS_COBALT)
   HW_LOG("Reporting hang to Java.");
-  HangWatcher::ReportHangToJava();
+  HangWatcher::ReportHangToJava(watch_state_snapshot);
 #endif
 
   if (on_hang_closure_for_testing_) {
@@ -1007,6 +1007,49 @@ void HangWatcher::DoDumpWithoutCrashing(
 
   capture_in_progress_.store(false, std::memory_order_relaxed);
   HW_LOG("Capture in progress store done.");
+}
+
+std::string ThreadTypeToString(HangWatcher::ThreadType type) {
+  switch (type) {
+    case HangWatcher::ThreadType::kIOThread:
+      return "IO";
+    case HangWatcher::ThreadType::kMainThread:
+      return "MAIN";
+    case HangWatcher::ThreadType::kThreadPoolThread:
+      return "WORKER";
+#if BUILDFLAG(IS_COBALT)
+    case HangWatcher::ThreadType::kRendererThread:
+      return "RENDERER_MAIN";
+#endif
+  }
+  return "UNKNOWN";
+}
+
+std::unique_ptr<HangWatcher::HangReportHandler> HangWatcher::g_handler;
+
+// static
+void HangWatcher::SetHandler(std::unique_ptr<HangReportHandler> handler) {
+  g_handler = std::move(handler);
+}
+
+// static
+void HangWatcher::ReportHangToJava(
+    const WatchStateSnapShot& watch_state_snapshot) {
+  if (g_handler) {
+        for (const auto& hung_thread_copy : watch_state_snapshot.GetHungThreadCopies()) {
+          HangWatcher::ThreadType thread_type = hung_thread_copy.thread_type;
+          std::string thread_type_name = ThreadTypeToString(thread_type);
+          int64_t hang_duration_ms =
+              (TimeTicks::Now() - hung_thread_copy.deadline).InMilliseconds();
+          g_handler->OnHangDetected(thread_type_name, hung_thread_copy.thread_id,
+                                  hang_duration_ms);
+          HW_LOG("ReportHangToJava: Called OnHangDetected for thread "
+                 << hung_thread_copy.thread_id << " with type " << thread_type_name);
+        }
+    
+  } else {
+    HW_LOG("ReportHangToJava: No handler set.");
+  }
 }
 
 void HangWatcher::SetAfterMonitorClosureForTesting(
@@ -1067,6 +1110,7 @@ void HangWatcher::UnregisterThread() {
 
   watch_states_.erase(it);
 }
+
 
 namespace internal {
 namespace {
@@ -1352,23 +1396,4 @@ PlatformThreadId HangWatchState::GetThreadID() const {
 
 }  // namespace internal
 
-std::unique_ptr<HangWatcher::HangReportHandler> HangWatcher::g_handler;
-
-// static
-void HangWatcher::SetHandler(std::unique_ptr<HangReportHandler> handler) {
-  g_handler = std::move(handler);
 }
-
-// static
-void HangWatcher::ReportHangToJava() {
-  if (g_handler) {
-    // Replace with actual NativeHangReport proto serialization.
-    const std::string stub_report = "STUB_HANG_REPORT_FROM_COBALT";
-    g_handler->OnHangDetected(stub_report);
-    HW_LOG("ReportHangToJava: Called OnHangDetected.");
-  } else {
-    HW_LOG("ReportHangToJava: No handler set.");
-  }
-}
-
-}  // namespace base

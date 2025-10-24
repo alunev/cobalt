@@ -262,18 +262,14 @@ class BASE_EXPORT HangWatcher : public DelegateSimpleThread::Delegate {
   class BASE_EXPORT HangReportHandler {
    public:
     virtual ~HangReportHandler() = default;
-    virtual void OnHangDetected(const std::string& serialized_report) = 0;
+    virtual void OnHangDetected(const std::string& thread_type_name, PlatformThreadId thread_id, int64_t hang_duration_ms) = 0;
   };
 
   // Sets the handler for hang reports. This should be called early in process
   // startup by platform-specific code.
   static void SetHandler(std::unique_ptr<HangReportHandler> handler);
 
-  // Reports a hang event to the Java layer.
-  static void ReportHangToJava();
-
  private:
-  // The global handler instance.
   static std::unique_ptr<HangReportHandler> g_handler;
 
   // See comment of ::RegisterThread() for details.
@@ -312,6 +308,7 @@ class BASE_EXPORT HangWatcher : public DelegateSimpleThread::Delegate {
     struct WatchStateCopy {
       base::TimeTicks deadline;
       base::PlatformThreadId thread_id;
+      base::HangWatcher::ThreadType thread_type;
     };
 
     WatchStateSnapShot();
@@ -351,6 +348,10 @@ class BASE_EXPORT HangWatcher : public DelegateSimpleThread::Delegate {
     // report and false if not. Can only be called after Init().
     bool IsActionable() const;
 
+    const std::vector<WatchStateCopy>& GetHungThreadCopies() const {
+      return hung_watch_state_copies_;
+    }
+
    private:
     bool initialized_ = false;
     std::vector<WatchStateCopy> hung_watch_state_copies_;
@@ -371,6 +372,9 @@ class BASE_EXPORT HangWatcher : public DelegateSimpleThread::Delegate {
   // and after.
   void DoDumpWithoutCrashing(const WatchStateSnapShot& watch_state_snapshot)
       EXCLUSIVE_LOCKS_REQUIRED(watch_state_lock_) LOCKS_EXCLUDED(capture_lock_);
+
+  // call java callbacks for hangs
+  void ReportHangToJava(const WatchStateSnapShot& watch_state_snapshot);
 
   // Stop all monitoring and join the HangWatcher thread.
   void Stop();
