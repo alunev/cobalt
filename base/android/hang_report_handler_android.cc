@@ -27,7 +27,7 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
   AndroidHangReportHandler() = default;
   ~AndroidHangReportHandler() override = default;
 
-  void OnHangDetected(const std::string& serialized_report) override {
+  void OnHangDetected(const std::string& thread_type_name, PlatformThreadId thread_id, int64_t hang_duration_ms) override {
     HW_LOG("AndroidHangReportHandler::OnHangDetected - ENTRY");
 
     JNIEnv* env = base::android::AttachCurrentThread();
@@ -51,11 +51,11 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
     }
 
     jmethodID method_id = env->GetStaticMethodID(
-        util_class.obj(), "reportHangFromNative", "([B)V");
+        util_class.obj(), "reportHangFromNative", "(Ljava/lang/String;JJ)V");
     if (!method_id) {
       HW_LOG(
           "AndroidHangReportHandler::OnHangDetected: Failed to find method "
-          "reportHangFromNative with byte[] signature");
+          "reportHangFromNative with (String, long, long) signature");
       if (env->ExceptionCheck()) {
         env->ExceptionDescribe();
         env->ExceptionClear();
@@ -63,24 +63,12 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
       return;
     }
 
-    // TODO(b/361779376): Replace with actual proto serialization.
-    // Create a dummy byte array for now.
-    std::vector<uint8_t> dummy_report = {0x08, 0x01, 0x12, 0x04, 'T', 'E', 'S', 'T', 0x18, 0xE8, 0x07};
-    ScopedJavaLocalRef<jbyteArray> j_report = base::android::ToJavaByteArray(env, dummy_report);
+    ScopedJavaLocalRef<jstring> j_threadTypeName = base::android::ConvertUTF8ToJavaString(env, thread_type_name);
+    jlong j_threadId = static_cast<jlong>(thread_id);
+    jlong j_hangDurationMs = static_cast<jlong>(hang_duration_ms);
 
-    if (!j_report) {
-      HW_LOG(
-          "AndroidHangReportHandler::OnHangDetected: Failed to create jbyteArray "
-          "report");
-      if (env->ExceptionCheck()) {
-        env->ExceptionDescribe();
-        env->ExceptionClear();
-      }
-      return;
-    }
-
-    HW_LOG("AndroidHangReportHandler::OnHangDetected: Calling static method with byte[].");
-    env->CallStaticVoidMethod(util_class.obj(), method_id, j_report.obj());
+    HW_LOG("AndroidHangReportHandler::OnHangDetected: Calling static method with (String, long, long).");
+    env->CallStaticVoidMethod(util_class.obj(), method_id, j_threadTypeName.obj(), j_threadId, j_hangDurationMs);
 
     if (env->ExceptionCheck()) {
       HW_LOG("AndroidHangReportHandler::OnHangDetected: Exception occurred.");
