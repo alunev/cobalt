@@ -4,20 +4,20 @@
 
 #include "base/android/hang_report_handler_android.h"
 
+#include <errno.h>
+#include <fcntl.h>
 #include <jni.h>
+#include <stdio.h>  // For dprintf
+#include <string.h>
+#include <sys/prctl.h>  // For prctl
+#include <sys/ptrace.h>
+#include <sys/user.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/ptrace.h>
-#include <sys/wait.h>
-#include <sys/user.h>
-#include <errno.h>
-#include <string.h>
-#include <stdio.h> // For dprintf
-#include <sys/prctl.h> // For prctl
 
 #include "base/android/jni_android.h"
 #include "base/android/jni_array.h"
@@ -37,9 +37,14 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
   AndroidHangReportHandler() = default;
   ~AndroidHangReportHandler() override = default;
 
-  void OnHangDetected(const std::string& thread_type_name, PlatformThreadId thread_id, int64_t hang_duration_ms) override {
-    HW_LOG("!!!!!!!!!!!!!!!!!!!!!!!! HANG DETECTED !!!!!!!!!!!!!!!!!!!!!!!! TID: " << thread_id);
-    HW_LOG("AndroidHangReportHandler::OnHangDetected - ENTRY, TID: " << thread_id);
+  void OnHangDetected(const std::string& thread_type_name,
+                      PlatformThreadId thread_id,
+                      int64_t hang_duration_ms) override {
+    HW_LOG(
+        "!!!!!!!!!!!!!!!!!!!!!!!! HANG DETECTED !!!!!!!!!!!!!!!!!!!!!!!! TID: "
+        << thread_id);
+    HW_LOG(
+        "AndroidHangReportHandler::OnHangDetected - ENTRY, TID: " << thread_id);
 
     int pipefd[2];
     if (pipe(pipefd) == -1) {
@@ -62,17 +67,19 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
     } else if (child_pid == 0) {
       // Child process
       HW_LOG("Child: process created, PID: " << getpid());
-      close(pipefd[0]); // Close unused read end
+      close(pipefd[0]);  // Close unused read end
 
       if (ptrace(PTRACE_ATTACH, thread_id, NULL, NULL) == -1) {
-        HW_LOG("Child: PTRACE_ATTACH failed for TID " << thread_id << ": " << strerror(errno));
+        HW_LOG("Child: PTRACE_ATTACH failed for TID " << thread_id << ": "
+                                                      << strerror(errno));
         _exit(1);
       }
       HW_LOG("Child: PTRACE_ATTACH successful for TID " << thread_id);
 
       int status;
       if (waitpid(thread_id, &status, 0) == -1) {
-        HW_LOG("Child: waitpid failed for TID " << thread_id << ": " << strerror(errno));
+        HW_LOG("Child: waitpid failed for TID " << thread_id << ": "
+                                                << strerror(errno));
         ptrace(PTRACE_DETACH, thread_id, NULL, NULL);
         _exit(1);
       }
@@ -95,22 +102,30 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
           uintptr_t bp = ptrace_regs.ebp;
           for (int i = 0; i < 64 && bp != 0; ++i) {
             errno = 0;
-            uintptr_t return_addr = ptrace(PTRACE_PEEKDATA, thread_id, (void*)(bp + sizeof(void*)), NULL);
+            uintptr_t return_addr = ptrace(PTRACE_PEEKDATA, thread_id,
+                                           (void*)(bp + sizeof(void*)), NULL);
             if (errno != 0) {
-              HW_LOG("Child: PTRACE_PEEKDATA failed for return address at " << std::hex << (bp + sizeof(void*)) << ": " << strerror(errno));
+              HW_LOG("Child: PTRACE_PEEKDATA failed for return address at "
+                     << std::hex << (bp + sizeof(void*)) << ": "
+                     << strerror(errno));
               break;
             }
-            if (return_addr == 0) break;
+            if (return_addr == 0) {
+              break;
+            }
             stack_trace_stream << "  0x" << std::hex << return_addr << "\n";
 
             errno = 0;
-            uintptr_t next_bp = ptrace(PTRACE_PEEKDATA, thread_id, (void*)bp, NULL);
+            uintptr_t next_bp =
+                ptrace(PTRACE_PEEKDATA, thread_id, (void*)bp, NULL);
             if (errno != 0) {
-              HW_LOG("Child: PTRACE_PEEKDATA failed for next ebp at " << std::hex << bp << ": " << strerror(errno));
+              HW_LOG("Child: PTRACE_PEEKDATA failed for next ebp at "
+                     << std::hex << bp << ": " << strerror(errno));
               break;
             }
             if (next_bp <= bp) {
-              HW_LOG("Child: Stack walk terminated to prevent loop: next_bp " << std::hex << next_bp << " <= bp " << bp);
+              HW_LOG("Child: Stack walk terminated to prevent loop: next_bp "
+                     << std::hex << next_bp << " <= bp " << bp);
               break;
             }
             bp = next_bp;
@@ -129,7 +144,7 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
           }
         } else {
           HW_LOG("Child: PTRACE_GETREGS failed for TID " << thread_id << ": "
-                                                        << strerror(errno));
+                                                         << strerror(errno));
         }
 #elif defined(__aarch64__)
         struct user_pt_regs ptrace_regs;
@@ -137,7 +152,7 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
           HW_LOG("Child: Registers for TID " << thread_id << ":");
           HW_LOG("  pc: " << std::hex << ptrace_regs.pc);
           HW_LOG("  sp: " << std::hex << ptrace_regs.sp);
-          uintptr_t bp = ptrace_regs.regs[29]; // Frame pointer (x29)
+          uintptr_t bp = ptrace_regs.regs[29];  // Frame pointer (x29)
           HW_LOG("  fp: " << std::hex << bp);
 
           // Manual stack walk for ARM64
@@ -147,22 +162,30 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
 
           for (int i = 0; i < 64 && bp != 0; ++i) {
             errno = 0;
-            uintptr_t return_addr = ptrace(PTRACE_PEEKDATA, thread_id, (void*)(bp + sizeof(void*)), NULL);
+            uintptr_t return_addr = ptrace(PTRACE_PEEKDATA, thread_id,
+                                           (void*)(bp + sizeof(void*)), NULL);
             if (errno != 0) {
-              HW_LOG("Child: PTRACE_PEEKDATA failed for return address at " << std::hex << (bp + sizeof(void*)) << ": " << strerror(errno));
+              HW_LOG("Child: PTRACE_PEEKDATA failed for return address at "
+                     << std::hex << (bp + sizeof(void*)) << ": "
+                     << strerror(errno));
               break;
             }
-            if (return_addr == 0) break;
+            if (return_addr == 0) {
+              break;
+            }
             stack_trace_stream << "  0x" << std::hex << return_addr << "\\n";
 
             errno = 0;
-            uintptr_t next_bp = ptrace(PTRACE_PEEKDATA, thread_id, (void*)bp, NULL);
+            uintptr_t next_bp =
+                ptrace(PTRACE_PEEKDATA, thread_id, (void*)bp, NULL);
             if (errno != 0) {
-              HW_LOG("Child: PTRACE_PEEKDATA failed for next fp at " << std::hex << bp << ": " << strerror(errno));
+              HW_LOG("Child: PTRACE_PEEKDATA failed for next fp at "
+                     << std::hex << bp << ": " << strerror(errno));
               break;
             }
             if (next_bp <= bp) {
-              HW_LOG("Child: Stack walk terminated to prevent loop: next_bp " << std::hex << next_bp << " <= bp " << bp);
+              HW_LOG("Child: Stack walk terminated to prevent loop: next_bp "
+                     << std::hex << next_bp << " <= bp " << bp);
               break;
             }
             bp = next_bp;
@@ -181,27 +204,30 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
           }
         } else {
           HW_LOG("Child: PTRACE_GETREGS failed for TID " << thread_id << ": "
-                                                        << strerror(errno));
+                                                         << strerror(errno));
         }
 #else
         HW_LOG("Child: Unsupported architecture for register dump");
         const char* placeholder = "Unsupported architecture";
         write(pipefd[1], placeholder, strlen(placeholder));
+
 #endif
       } else {
-         HW_LOG("Child: Thread " << thread_id << " not stopped as expected, status: " << status);
+        HW_LOG("Child: Thread "
+               << thread_id << " not stopped as expected, status: " << status);
       }
       ptrace(PTRACE_DETACH, thread_id, NULL, NULL);
-      close(pipefd[1]); // Close write end
+      close(pipefd[1]);  // Close write end
       HW_LOG("Child: Exiting");
       _exit(0);
     } else {
       // Parent process
       HW_LOG("Parent: process, child PID: " << child_pid);
-      close(pipefd[1]); // Close unused write end
+      close(pipefd[1]);  // Close unused write end
       int child_status;
       waitpid(child_pid, &child_status, 0);
-      HW_LOG("Parent: Child " << child_pid << " exited with status " << child_status);
+      HW_LOG("Parent: Child " << child_pid << " exited with status "
+                              << child_status);
 
       // Read stack trace from pipe
       std::string stack_trace;
@@ -211,12 +237,11 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
         buffer[bytes_read] = '\0';
         stack_trace += buffer;
       }
-      close(pipefd[0]); // Close read end
+      close(pipefd[0]);  // Close read end
       HW_LOG("Parent: Read stack trace from pipe:\n" << stack_trace);
 
       JNIEnv* env = base::android::AttachCurrentThread();
       if (!env) {
-
         HW_LOG("Parent: Failed to get JNIEnv.");
         return;
       }
@@ -224,31 +249,39 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
       ScopedJavaLocalRef<jclass> util_class = base::android::GetClass(
           env, "package"
           "class");
-      if (!util_class) {
-          HW_LOG("Parent: Failed to find class");
-          return;
-      }
 
-      jmethodID method_id = env->GetStaticMethodID(
-          util_class.obj(), "reportHangFromNative", "(Ljava/lang/String;JJ)V");
-      if (!method_id) {
-        HW_LOG("Parent: Failed to find method with (String, long, long) signature");
+      if (!util_class) {
+        HW_LOG("Parent: Failed to find class");
         return;
       }
 
-      ScopedJavaLocalRef<jstring> j_threadTypeName = base::android::ConvertUTF8ToJavaString(env, thread_type_name);
+      jmethodID method_id =
+          env->GetStaticMethodID(util_class.obj(), "reportHangFromNative",
+                                 "(Ljava/lang/String;JJLjava/lang/String;)V");
+      if (!method_id) {
+        HW_LOG(
+            "Parent: Failed to find method with (String, long, long, String) "
+            "signature");
+        return;
+      }
+
+      ScopedJavaLocalRef<jstring> j_threadTypeName =
+          base::android::ConvertUTF8ToJavaString(env, thread_type_name);
       jlong j_threadId = static_cast<jlong>(thread_id);
       jlong j_hangDurationMs = static_cast<jlong>(hang_duration_ms);
+      ScopedJavaLocalRef<jstring> j_stackTrace =
+          base::android::ConvertUTF8ToJavaString(env, stack_trace);
 
-      HW_LOG("Parent: Calling static method (3 args).");
-      env->CallStaticVoidMethod(util_class.obj(), method_id, j_threadTypeName.obj(), j_threadId, j_hangDurationMs);
+      HW_LOG("Parent: Calling static method (4 args).");
+      env->CallStaticVoidMethod(util_class.obj(), method_id,
+                                j_threadTypeName.obj(), j_threadId,
+                                j_hangDurationMs, j_stackTrace.obj());
 
       if (env->ExceptionCheck()) {
         HW_LOG("Parent: Exception occurred during JNI call.");
         env->ExceptionDescribe();
         env->ExceptionClear();
       }
-      HW_LOG("Parent: Finished JNI call.");
     }
   }
 };
@@ -257,8 +290,7 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
 
 void InstallAndroidHangReportHandler() {
   HW_LOG("InstallAndroidHangReportHandler");
-  base::HangWatcher::SetHandler(
-      std::make_unique<AndroidHangReportHandler>());
+  base::HangWatcher::SetHandler(std::make_unique<AndroidHangReportHandler>());
 }
 
 }  // namespace android
