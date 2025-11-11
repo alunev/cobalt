@@ -17,6 +17,7 @@
 #include "content/public/app/content_jni_onload.h"
 #include "content/public/app/content_main.h"
 
+#include "starboard/android/shared/hang_report_handler.h"
 #include "starboard/android/shared/jni_state.h"
 
 // This is called by the VM when the shared library is first loaded.
@@ -27,6 +28,7 @@ JNI_EXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
   if (!content::android::OnJNIOnLoadInit()) {
     return -1;
   }
+  starboard::android::InstallAndroidHangReportHandler();
   content::SetContentMainDelegate(new cobalt::CobaltMainDelegate());
   return JNI_VERSION_1_4;
 }
