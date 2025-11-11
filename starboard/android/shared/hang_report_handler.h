@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BASE_ANDROID_HANG_REPORT_HANDLER_ANDROID_H_
-#define BASE_ANDROID_HANG_REPORT_HANDLER_ANDROID_H_
+#ifndef STARBOARD_ANDROID_SHARED_HANG_REPORT_HANDLER_H_
+#define STARBOARD_ANDROID_SHARED_HANG_REPORT_HANDLER_H_
 
 #include "base/threading/hang_watcher.h"
 
-namespace base {
+namespace starboard {
 namespace android {
 
 // Creates and installs the Android-specific HangReportHandler.
 void InstallAndroidHangReportHandler();
 
 }  // namespace android
-}  // namespace base
+}  // namespace starboard
 
-#endif  // BASE_ANDROID_HANG_REPORT_HANDLER_ANDROID_H_
+#endif  // STARBOARD_ANDROID_SHARED_HANG_REPORT_HANDLER_H_

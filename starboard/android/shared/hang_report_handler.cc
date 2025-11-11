@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/android/hang_report_handler_android.h"
+#include "starboard/android/shared/hang_report_handler.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -25,7 +25,7 @@
 #include "base/logging.h"
 #include "base/threading/hang_watcher.h"
 
-namespace base {
+namespace starboard {
 namespace android {
 
 namespace {
@@ -38,7 +38,7 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
   ~AndroidHangReportHandler() override = default;
 
   void OnHangDetected(const std::string& thread_type_name,
-                      PlatformThreadId thread_id,
+                      base::PlatformThreadId thread_id,
                       int64_t hang_duration_ms) override {
     HW_LOG(
         "!!!!!!!!!!!!!!!!!!!!!!!! HANG DETECTED !!!!!!!!!!!!!!!!!!!!!!!! TID: "
@@ -157,8 +157,8 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
 
           // Manual stack walk for ARM64
           std::stringstream stack_trace_stream;
-          stack_trace_stream << "Stack Trace (TID: " << thread_id << "):\\n";
-          stack_trace_stream << "  0x" << std::hex << ptrace_regs.pc << "\\n";
+          stack_trace_stream << "Stack Trace (TID: " << thread_id << "):\n";
+          stack_trace_stream << "  0x" << std::hex << ptrace_regs.pc << "\n";
 
           for (int i = 0; i < 64 && bp != 0; ++i) {
             errno = 0;
@@ -173,7 +173,7 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
             if (return_addr == 0) {
               break;
             }
-            stack_trace_stream << "  0x" << std::hex << return_addr << "\\n";
+            stack_trace_stream << "  0x" << std::hex << return_addr << "\n";
 
             errno = 0;
             uintptr_t next_bp =
@@ -191,7 +191,7 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
             bp = next_bp;
           }
 
-          HW_LOG("Child: Stack trace captured:\\n" << stack_trace_stream.str());
+          HW_LOG("Child: Stack trace captured:\n" << stack_trace_stream.str());
 
           // Write stack trace to pipe
           std::string stack_trace_str = stack_trace_stream.str();
@@ -246,30 +246,33 @@ class AndroidHangReportHandler : public base::HangWatcher::HangReportHandler {
         return;
       }
 
-      ScopedJavaLocalRef<jclass> util_class = base::android::GetClass(
-          env, "package"
-          "class");
+      base::android::ScopedJavaLocalRef<jclass> util_class =
+          base::android::GetClass(env,
+                                  "dev/cobalt/coat/NativeHangReportHandler");
 
       if (!util_class) {
-        HW_LOG("Parent: Failed to find class");
+        HW_LOG(
+            "Parent: Failed to find class "
+            "dev/cobalt/coat/NativeHangReportHandler");
         return;
       }
 
       jmethodID method_id =
-          env->GetStaticMethodID(util_class.obj(), "reportHangFromNative",
+          env->GetStaticMethodID(util_class.obj(), "onNativeHang",
                                  "(Ljava/lang/String;JJLjava/lang/String;)V");
       if (!method_id) {
         HW_LOG(
-            "Parent: Failed to find method with (String, long, long, String) "
+            "Parent: Failed to find method onNativeHang with (String, long, "
+            "long, String) "
             "signature");
         return;
       }
 
-      ScopedJavaLocalRef<jstring> j_threadTypeName =
+      base::android::ScopedJavaLocalRef<jstring> j_threadTypeName =
           base::android::ConvertUTF8ToJavaString(env, thread_type_name);
       jlong j_threadId = static_cast<jlong>(thread_id);
       jlong j_hangDurationMs = static_cast<jlong>(hang_duration_ms);
-      ScopedJavaLocalRef<jstring> j_stackTrace =
+      base::android::ScopedJavaLocalRef<jstring> j_stackTrace =
           base::android::ConvertUTF8ToJavaString(env, stack_trace);
 
       HW_LOG("Parent: Calling static method (4 args).");
@@ -294,4 +297,4 @@ void InstallAndroidHangReportHandler() {
 }
 
 }  // namespace android
-}  // namespace base
+}  // namespace starboard

@@ -1236,8 +1236,6 @@ component("base") {
       "android/feature_list_jni.cc",
       "android/features_jni.cc",
       "android/field_trial_list.cc",
-      "android/hang_report_handler_android.cc",
-      "android/hang_report_handler_android.h",
       "android/important_file_writer_android.cc",
       "android/int_string_callback.cc",
       "android/int_string_callback.h",
@@ -1402,12 +1400,12 @@ component("base") {
       "android/trace_event_binding.cc",
       "android/trace_event_binding.h",
     ]
-    deps += [ 
+    deps += [
       ":base_jni_headers",
       ":cobalt_for_google3_buildflags",
     ]
 
-    
+
   }  # is_android || is_robolectric
 
   # Chromeos.

@@ -9,10 +9,6 @@
 #include "base/android/library_loader/library_loader_hooks.h"
 #include "base/functional/bind.h"
 
-#if BUILDFLAG(IS_ANDROID)
-#include "base/android/hang_report_handler_android.h"
-#endif
-
 namespace base {
 namespace android {
 
@@ -20,10 +16,6 @@ bool OnJNIOnLoadInit() {
   InitAtExitManager();
   JNIEnv* env = base::android::AttachCurrentThread();
   base::android::InitGlobalClassLoader(env);
-
-#if BUILDFLAG(IS_ANDROID)
-  base::android::InstallAndroidHangReportHandler();
-#endif
 
   return true;
 }

@@ -200,6 +200,8 @@ static_library("starboard_platform") {
     "get_home_directory.cc",
     "graphics.cc",
     "graphics.h",
+    "hang_report_handler.cc",
+    "hang_report_handler.h",
 
     #"input_events_generator.cc",
     #"input_events_generator.h",
