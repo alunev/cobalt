@@ -15,9 +15,12 @@
 #ifndef COBALT_APP_COBALT_CRASH_REPORTER_CLIENT_H_
 #define COBALT_APP_COBALT_CRASH_REPORTER_CLIENT_H_
 
+#include <string>
+
 #include "base/files/file_path.h"
 #include "base/no_destructor.h"
 #include "build/build_config.h"
+#include "client/crash_report_database.h"
 #include "components/crash/core/app/crash_reporter_client.h"
 
 class CobaltCrashReporterClient : public crash_reporter::CrashReporterClient {
@@ -28,7 +31,8 @@ class CobaltCrashReporterClient : public crash_reporter::CrashReporterClient {
   CobaltCrashReporterClient& operator=(const CobaltCrashReporterClient&) =
       delete;
 
-  void GetProductInfo(ProductInfo* product_info) override;
+  void GetProductNameAndVersion(const char** product_name,
+                                const char** version) override;
 
   bool GetCrashDumpLocation(base::FilePath* crash_dir) override;
   bool IsRunningUnattended() override;
@@ -40,6 +44,5 @@ class CobaltCrashReporterClient : public crash_reporter::CrashReporterClient {
   CobaltCrashReporterClient();
   ~CobaltCrashReporterClient() override;
 };
-
 
 #endif  // COBALT_APP_COBALT_CRASH_REPORTER_CLIENT_H_

@@ -14,6 +14,8 @@
 
 #include "cobalt/app/cobalt_crash_reporter_client.h"
 
+#include <string>
+
 #include "base/check.h"
 #include "base/path_service.h"
 
@@ -26,18 +28,20 @@ CobaltCrashReporterClient::CobaltCrashReporterClient() {}
 
 CobaltCrashReporterClient::~CobaltCrashReporterClient() {}
 
-void CobaltCrashReporterClient::GetProductInfo(ProductInfo* product_info) {
-  CHECK(product_info);
-  product_info->product_name = "Chrobalt_ATV";
+void CobaltCrashReporterClient::GetProductNameAndVersion(
+    const char** product_name,
+    const char** version) {
+  CHECK(product_name);
+  CHECK(version);
+  *product_name = "Chrobalt_ATV";
   // TODO: hwarriner - get the actual app version.
-  product_info->version = "1.23.23";
-  product_info->channel = "unused";
+  *version = "1.23.23";
 }
 
 bool CobaltCrashReporterClient::GetCrashDumpLocation(
     base::FilePath* crash_dir) {
-  crash_dump_location_ = new base::FilePath(
-      "/data/data/dev.cobalt.coat/cache/crashpad");
+  crash_dump_location_ =
+      new base::FilePath("/data/data/dev.cobalt.coat/cache/crashpad");
   *crash_dir = *crash_dump_location_;
   return true;
 }
