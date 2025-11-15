@@ -989,16 +989,19 @@ void HangWatcher::DoDumpWithoutCrashing(
   HW_LOG("Latest expired deadline: " << latest_expired_deadline);
 
 #if BUILDFLAG(IS_ANDROID) && BUILDFLAG(IS_COBALT)
-  HW_LOG("Reporting hang to Java.");
-  HangWatcher::ReportHangToJava(watch_state_snapshot);
+  // HW_LOG("Reporting hang to Java.");
+  // HangWatcher::ReportHangToJava(watch_state_snapshot);
+  HW_LOG("SKIP Reporting hang to Java.");
 #endif
 
   if (on_hang_closure_for_testing_) {
     HW_LOG("Running on_hang_closure_for_testing.");
     on_hang_closure_for_testing_.Run();
+    HW_LOG("Finished running on_hang_closure_for_testing.");
   } else {
     HW_LOG("Recording hang.");
     RecordHang();
+    HW_LOG("Finished recording hang.");
   }
 
   // Update after running the actual capture.
@@ -1046,7 +1049,7 @@ void HangWatcher::ReportHangToJava(
           HW_LOG("ReportHangToJava: Called OnHangDetected for thread "
                  << hung_thread_copy.thread_id << " with type " << thread_type_name);
         }
-    
+
   } else {
     HW_LOG("ReportHangToJava: No handler set.");
   }

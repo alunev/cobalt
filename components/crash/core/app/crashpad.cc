@@ -172,6 +172,7 @@ bool InitializeCrashpadImpl(bool initial_client,
   // the correct function, at the correct file and line. This would be
   // preferable to having all occurrences show up in DumpWithoutCrashing() at
   // the same file and line.
+  LOG(ERROR) << "Crashpad DEBUG: Setting DumpWithoutCrashing function";
   base::debug::SetDumpWithoutCrashingFunction(DumpWithoutCrashing);
 
   // TODO(pbos): Update this to not rely on a _internal namespace once there's
@@ -270,6 +271,7 @@ void SetUploadConsent(bool consent) {
 
 #if !BUILDFLAG(IS_ANDROID)
 void DumpWithoutCrashing() {
+  LOG(ERROR) << "Crashpad DEBUG: crash_reporter::DumpWithoutCrashing() called.";
   CRASHPAD_SIMULATE_CRASH();
 }
 
