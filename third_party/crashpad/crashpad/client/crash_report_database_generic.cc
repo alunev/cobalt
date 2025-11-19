@@ -275,8 +275,7 @@ CrashReportDatabaseGeneric::CrashReportDatabaseGeneric() = default;
 
 CrashReportDatabaseGeneric::~CrashReportDatabaseGeneric() = default;
 
-bool CrashReportDatabaseGeneric::Initialize(const base::FilePath& path,
-                                            bool may_create) {
+bool CrashReportDatabaseGeneric::Initialize(const base::FilePath& path, bool may_create) {
   INITIALIZATION_STATE_SET_INITIALIZING(initialized_);
   base_dir_ = path;
 

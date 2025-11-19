@@ -411,7 +411,8 @@ void BuildHandlerArgs(CrashReporterClient* crash_reporter_client,
   crash_reporter_client->GetCrashMetricsLocation(metrics_path);
 
   // TODO(jperaza): Set URL for Android when Crashpad takes over report upload.
-  *url = std::string();
+  *url = "https://clients2.google.com/cr/report";
+  LOG(ERROR) << "Crashpad DEBUG: Set upload URL to: " << *url;
 
   std::string product_name;
   std::string product_version;
@@ -434,10 +435,6 @@ void BuildHandlerArgs(CrashReporterClient* crash_reporter_client,
   }
 
   (*process_annotations)["plat"] = std::string("Android");
-
-  // Add arguments to write minidump to log and prevent writing to database.
-  arguments->push_back("--write-minidump-to-log");
-  arguments->push_back("--no-write-minidump-to-database");
 }
 
 bool ShouldHandleCrashAndUpdateArguments(bool write_minidump_to_database,

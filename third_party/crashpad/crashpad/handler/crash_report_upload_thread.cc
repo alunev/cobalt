@@ -188,22 +188,24 @@ void CrashReportUploadThread::ProcessPendingReports() {
 
 void CrashReportUploadThread::ProcessPendingReport(
     const CrashReportDatabase::Report& report) {
+  LOG(ERROR) << "Crashpad DEBUG: ProcessPendingReport for report: " << report.uuid.ToString();
 #if BUILDFLAG(IS_APPLE)
   RecordFileLimitAnnotation();
 #endif  // BUILDFLAG(IS_APPLE)
 
   Settings* const settings = database_->GetSettings();
 
-  bool uploads_enabled;
-  if (!report.upload_explicitly_requested &&
-      (!settings->GetUploadsEnabled(&uploads_enabled) || !uploads_enabled)) {
-    // Don’t attempt an upload if there’s no URL to upload to. Allow upload if
-    // it has been explicitly requested by the user, otherwise, respect the
-    // upload-enabled state stored in the database’s settings.
-    database_->SkipReportUpload(report.uuid,
-                                Metrics::CrashSkippedReason::kUploadsDisabled);
-    return;
-  }
+  // if (!report.upload_explicitly_requested &&
+  //     (!settings->GetUploadsEnabled(&uploads_enabled) || !uploads_enabled)) {
+  //   // Don’t attempt an upload if there’s no URL to upload to. Allow upload if
+  //   // it has been explicitly requested by the user, otherwise, respect the
+  //   // upload-enabled state stored in the database’s settings.
+  //   database_->SkipReportUpload(report.uuid,
+  //                               Metrics::CrashSkippedReason::kUploadsDisabled);
+  //   LOG(ERROR) << "Crashpad DEBUG: Upload disabled or no URL, skipping";
+  //   return;
+  // }
+  LOG(ERROR) << "Crashpad DEBUG: Bypassing upload enabled check for testing.";
 
   if (ShouldRateLimitUpload(report))
     return;
@@ -216,6 +218,7 @@ void CrashReportUploadThread::ProcessPendingReport(
   std::unique_ptr<const CrashReportDatabase::UploadReport> upload_report;
   CrashReportDatabase::OperationStatus status =
       database_->GetReportForUploading(report.uuid, &upload_report);
+  LOG(ERROR) << "Crashpad DEBUG: GetReportForUploading status: " << status;
   switch (status) {
     case CrashReportDatabase::kNoError:
       break;
@@ -243,6 +246,7 @@ void CrashReportUploadThread::ProcessPendingReport(
   std::string response_body;
   UploadResult upload_result =
       UploadReport(upload_report.get(), &response_body);
+  LOG(ERROR) << "Crashpad DEBUG: UploadReport result: " << static_cast<int>(upload_result);
   switch (upload_result) {
     case UploadResult::kSuccess:
       database_->RecordUploadComplete(std::move(upload_report), response_body);
@@ -281,6 +285,7 @@ void CrashReportUploadThread::ProcessPendingReport(
 CrashReportUploadThread::UploadResult CrashReportUploadThread::UploadReport(
     const CrashReportDatabase::UploadReport* report,
     std::string* response_body) {
+  LOG(ERROR) << "Crashpad DEBUG: UploadReport called for report: " << report->uuid.ToString();
   std::map<std::string, std::string> parameters;
 
   FileReader* reader = report->Reader();
@@ -365,10 +370,13 @@ CrashReportUploadThread::UploadResult CrashReportUploadThread::UploadReport(
     }
   }
   http_transport->SetURL(url);
+  LOG(ERROR) << "Crashpad DEBUG: Uploading to URL: " << url;
 
   if (!http_transport->ExecuteSynchronously(response_body)) {
+    LOG(ERROR) << "Crashpad DEBUG: HTTP ExecuteSynchronously failed.";
     return UploadResult::kRetry;
   }
+  LOG(ERROR) << "Crashpad DEBUG: HTTP ExecuteSynchronously succeeded.";
 
   return UploadResult::kSuccess;
 }

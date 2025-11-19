@@ -689,6 +689,10 @@ bool CrashpadClient::StartHandlerAtCrash(
   std::vector<std::string> argv = BuildHandlerArgvStrings(
       handler, database, metrics_dir, url, annotations, arguments, attachments);
 
+  for (const auto& arg : argv) {
+    LOG(ERROR) << "Crashpad DEBUG: Handler argument: " << arg;
+  }
+
   auto signal_handler = LaunchAtCrashHandler::Get();
   bool result = signal_handler->Initialize(&argv, nullptr, &unhandled_signals_);
   LOG(ERROR) << "Crashpad DEBUG: StartHandlerAtCrash Initialize result: " << result;

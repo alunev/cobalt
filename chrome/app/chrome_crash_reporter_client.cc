@@ -116,7 +116,12 @@ void ChromeCrashReporterClient::GetProductNameAndVersion(
 #endif
 #endif
 
-  *version = PRODUCT_VERSION;
+// *product_name = "Cobalt";                                                                                                                                │
+// *version = COBALT_VERSION;                                                                                                                               │
+*product_name = "Cobalt";                                                                                                                                   │
+*version = COBALT_VERSION;                                                                                                                                  │
+
+LOG(ERROR) << "Crashpad DEBUG: GetProductNameAndVersion: product=" << *product_name << ", version=" << *version;
 }
 
 void ChromeCrashReporterClient::GetProductNameAndVersion(
