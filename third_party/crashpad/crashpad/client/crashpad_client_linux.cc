@@ -296,16 +296,13 @@ class LaunchAtCrashHandler : public SignalHandler {
   }
 
   void HandleCrashImpl() override {
-    LOG(ERROR) << "Crashpad DEBUG: LaunchAtCrashHandler::HandleCrashImpl() called.";
     ScopedPrSetPtracer set_ptracer(sys_getpid(), /* may_log= */ false);
 
     pid_t pid = fork();
     if (pid < 0) {
-      PLOG(ERROR) << "Crashpad DEBUG: fork failed";
       return;
     }
     if (pid == 0) {
-      LOG(ERROR) << "Crashpad DEBUG: Child process created, executing handler.";
       if (set_envp_) {
         execve(argv_[0],
                const_cast<char* const*>(argv_.data()),
@@ -313,14 +310,11 @@ class LaunchAtCrashHandler : public SignalHandler {
       } else {
         execv(argv_[0], const_cast<char* const*>(argv_.data()));
       }
-      PLOG(ERROR) << "Crashpad DEBUG: execve/execv failed";
       _exit(EXIT_FAILURE);
     }
 
-    LOG(ERROR) << "Crashpad DEBUG: Parent process waiting for handler process " << pid;
     int status;
     waitpid(pid, &status, 0);
-    LOG(ERROR) << "Crashpad DEBUG: Handler process " << pid << " exited with status " << status;
   }
 
  private:
@@ -685,18 +679,11 @@ bool CrashpadClient::StartHandlerAtCrash(
     const std::map<std::string, std::string>& annotations,
     const std::vector<std::string>& arguments,
     const std::vector<base::FilePath>& attachments) {
-  LOG(ERROR) << "Crashpad DEBUG: StartHandlerAtCrash called.";
   std::vector<std::string> argv = BuildHandlerArgvStrings(
       handler, database, metrics_dir, url, annotations, arguments, attachments);
 
-  for (const auto& arg : argv) {
-    LOG(ERROR) << "Crashpad DEBUG: Handler argument: " << arg;
-  }
-
   auto signal_handler = LaunchAtCrashHandler::Get();
-  bool result = signal_handler->Initialize(&argv, nullptr, &unhandled_signals_);
-  LOG(ERROR) << "Crashpad DEBUG: StartHandlerAtCrash Initialize result: " << result;
-  return result;
+  return signal_handler->Initialize(&argv, nullptr, &unhandled_signals_);
 }
 
 // static
@@ -718,7 +705,6 @@ bool CrashpadClient::StartHandlerForClient(
 
 // static
 void CrashpadClient::DumpWithoutCrash(NativeCPUContext* context) {
-  LOG(ERROR) << "Crashpad DEBUG: CrashpadClient::DumpWithoutCrash() called.";
   if (!SignalHandler::Get()) {
     DLOG(ERROR) << "Crashpad isn't enabled";
     return;

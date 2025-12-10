@@ -171,7 +171,8 @@
                 "lib.java/url/mojom/url_mojom_gurl_java.jar",
                 "lib.java/url/mojom/url_mojom_origin_java.jar",
                 "lib.java/url/mojom/url_mojom_scheme_host_port_java.jar",
-                "lib.java/url/origin_java.jar"
+                "lib.java/url/origin_java.jar",
+                "lib.java/components/crash/android/java.jar"
             ],
             "rename_files": [
                 {
@@ -797,6 +798,10 @@
                 {
                     "from_file": "lib.java/ui/gfx/mojom/mojom_java.jar",
                     "to_file": "jar/ui_gfx_mojom_mojom_java.jar"
+                },
+                {
+                    "from_file": "lib.java/components/crash/android/java.jar",
+                    "to_file": "jar/components_crash_android_java.jar"
                 },
                 {
                     "from_file": "lib.java/ui/gfx/mojom/native_handle_types_java.jar",

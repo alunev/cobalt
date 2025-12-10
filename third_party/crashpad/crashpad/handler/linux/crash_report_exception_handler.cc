@@ -169,20 +169,16 @@ bool CrashReportExceptionHandler::HandleExceptionWithConnection(
     VMAddress requesting_thread_stack_address,
     pid_t* requesting_thread_id,
     UUID* local_report_id) {
-  LOG(ERROR) << "Crashpad DEBUG: HandleExceptionWithConnection called.";
   std::unique_ptr<ProcessSnapshotLinux> process_snapshot;
   std::unique_ptr<ProcessSnapshotSanitized> sanitized_snapshot;
-  LOG(ERROR) << "Crashpad DEBUG: Before CaptureSnapshot.";
-  bool snapshot_ok = CaptureSnapshot(connection,
+  if (!CaptureSnapshot(connection,
                        info,
                        *process_annotations_,
                        client_uid,
                        requesting_thread_stack_address,
                        requesting_thread_id,
                        &process_snapshot,
-                       &sanitized_snapshot);
-  LOG(ERROR) << "Crashpad DEBUG: After CaptureSnapshot, result: " << snapshot_ok;
-  if (!snapshot_ok) {
+                       &sanitized_snapshot)) {
     return false;
   }
 
@@ -192,16 +188,13 @@ bool CrashReportExceptionHandler::HandleExceptionWithConnection(
     process_snapshot->SetClientID(client_id);
   }
 
-  LOG(ERROR) << "Crashpad DEBUG: Before WriteMinidumpToDatabase/Log.";
-  bool result = write_minidump_to_database_
+  return write_minidump_to_database_
              ? WriteMinidumpToDatabase(process_snapshot.get(),
                                        sanitized_snapshot.get(),
                                        write_minidump_to_log_,
                                        local_report_id)
              : WriteMinidumpToLog(process_snapshot.get(),
                                   sanitized_snapshot.get());
-  LOG(ERROR) << "Crashpad DEBUG: After WriteMinidumpToDatabase/Log, result: " << result;
-  return result;
 }
 
 bool CrashReportExceptionHandler::WriteMinidumpToDatabase(
@@ -209,11 +202,9 @@ bool CrashReportExceptionHandler::WriteMinidumpToDatabase(
     ProcessSnapshotSanitized* sanitized_snapshot,
     bool write_minidump_to_log,
     UUID* local_report_id) {
-  LOG(ERROR) << "Crashpad DEBUG: WriteMinidumpToDatabase called.";
   std::unique_ptr<CrashReportDatabase::NewReport> new_report;
   CrashReportDatabase::OperationStatus database_status =
       database_->PrepareNewCrashReport(&new_report);
-  LOG(ERROR) << "Crashpad DEBUG: PrepareNewCrashReport status: " << database_status;
   if (database_status != CrashReportDatabase::kNoError) {
     LOG(ERROR) << "PrepareNewCrashReport failed";
     Metrics::ExceptionCaptureResult(
@@ -231,16 +222,12 @@ bool CrashReportExceptionHandler::WriteMinidumpToDatabase(
   minidump.InitializeFromSnapshot(snapshot);
   AddUserExtensionStreams(user_stream_data_sources_, snapshot, &minidump);
 
-  LOG(ERROR) << "Crashpad DEBUG: Before WriteEverything.";
-  bool write_ok = minidump.WriteEverything(new_report->Writer());
-  LOG(ERROR) << "Crashpad DEBUG: After WriteEverything, result: " << write_ok;
-  if (!write_ok) {
+  if (!minidump.WriteEverything(new_report->Writer())) {
     LOG(ERROR) << "WriteEverything failed";
     Metrics::ExceptionCaptureResult(
         Metrics::CaptureResult::kMinidumpWriteFailed);
     return false;
   }
-  LOG(ERROR) << "Crashpad DEBUG: WriteEverything succeeded.";
 
   bool write_minidump_to_log_succeed = false;
   if (write_minidump_to_log) {
@@ -251,7 +238,6 @@ bool CrashReportExceptionHandler::WriteMinidumpToDatabase(
         LOG(ERROR) << "WriteMinidumpLogFromFile failed";
     }
   }
-  LOG(ERROR) << "Crashpad DEBUG: WriteMinidumpLogFromFile succeeded: " << write_minidump_to_log_succeed;
 
   for (const auto& attachment : (*attachments_)) {
     FileReader file_reader;
@@ -273,17 +259,14 @@ bool CrashReportExceptionHandler::WriteMinidumpToDatabase(
   }
 
   UUID uuid;
-  LOG(ERROR) << "Crashpad DEBUG: Before FinishedWritingCrashReport.";
   database_status =
       database_->FinishedWritingCrashReport(std::move(new_report), &uuid);
-  LOG(ERROR) << "Crashpad DEBUG: FinishedWritingCrashReport status: " << database_status;
   if (database_status != CrashReportDatabase::kNoError) {
     LOG(ERROR) << "FinishedWritingCrashReport failed";
     Metrics::ExceptionCaptureResult(
         Metrics::CaptureResult::kFinishedWritingCrashReportFailed);
     return false;
   }
-  LOG(ERROR) << "Crashpad DEBUG: FinishedWritingCrashReport succeeded.";
 
   if (upload_thread_) {
     upload_thread_->ReportPending(uuid);

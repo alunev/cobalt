@@ -411,8 +411,7 @@ void BuildHandlerArgs(CrashReporterClient* crash_reporter_client,
   crash_reporter_client->GetCrashMetricsLocation(metrics_path);
 
   // TODO(jperaza): Set URL for Android when Crashpad takes over report upload.
-  // *url = "https://clients2.google.com/cr/report"; // Disabled for Java uploader
-  LOG(ERROR) << "Crashpad DEBUG: Upload URL not set, native upload disabled.";
+  *url = std::string();
 
   std::string product_name;
   std::string product_version;
@@ -501,7 +500,6 @@ class HandlerStarter {
   HandlerStarter& operator=(const HandlerStarter&) = delete;
 
   base::FilePath Initialize(bool dump_at_crash) {
-    LOG(ERROR) << "Crashpad DEBUG: HandlerStarter::Initialize called.";
     base::FilePath database_path;
     base::FilePath metrics_path;
     std::string url;
@@ -509,60 +507,45 @@ class HandlerStarter {
     std::vector<std::string> arguments;
     BuildHandlerArgs(GetCrashReporterClient(), &database_path, &metrics_path,
                      &url, &process_annotations, &arguments);
-    LOG(ERROR) << "Crashpad DEBUG: BuildHandlerArgs completed.";
 
     base::FilePath exe_dir;
     base::FilePath handler_path;
     if (!GetHandlerPath(&exe_dir, &handler_path)) {
-      LOG(ERROR) << "Crashpad DEBUG: GetHandlerPath failed.";
       return database_path;
     }
-    LOG(ERROR) << "Crashpad DEBUG: Handler path: " << handler_path.value();
-    LOG(ERROR) << "Crashpad DEBUG: Path exists: " << base::PathExists(handler_path);
 
     if (crashpad::SetSanitizationInfo(GetCrashReporterClient(),
                                       &browser_sanitization_info_)) {
       arguments.push_back(base::StringPrintf("--sanitization-information=%p",
                                              &browser_sanitization_info_));
-      LOG(ERROR) << "Crashpad DEBUG: Sanitization info set.";
     }
 
     std::string browser_ptype;
     if (GetCrashReporterClient()->GetBrowserProcessType(&browser_ptype)) {
       process_annotations["ptype"] = browser_ptype;
-      LOG(ERROR) << "Crashpad DEBUG: Browser process type: " << browser_ptype;
     }
 
     // Don't handle SIGQUIT in the browser process on Android; the system masks
     // this and uses it for generating ART stack traces, and if it gets unmasked
     // (e.g. by a WebView app) we don't want to treat this as a crash.
     GetCrashpadClient().SetUnhandledSignals({SIGQUIT});
-    LOG(ERROR) << "Crashpad DEBUG: SetUnhandledSignals called.";
 
     if (!base::PathExists(handler_path)) {
-      LOG(ERROR) << "Crashpad DEBUG: Handler path does not exist. Attempting to use Java handler or trampoline.";
       use_java_handler_ =
           !GetHandlerTrampoline(&handler_trampoline_, &handler_library_);
-      LOG(ERROR) << "Crashpad DEBUG: use_java_handler_: " << use_java_handler_;
-      LOG(ERROR) << "Crashpad DEBUG: handler_trampoline_.empty(): " << handler_trampoline_.empty();
     }
 
     if (!ShouldHandleCrashAndUpdateArguments(
             dump_at_crash, GetCrashReporterClient()->ShouldWriteMinidumpToLog(),
             &arguments)) {
-      LOG(ERROR) << "Crashpad DEBUG: ShouldHandleCrashAndUpdateArguments returned false.";
       return database_path;
     }
-    LOG(ERROR) << "Crashpad DEBUG: ShouldHandleCrashAndUpdateArguments returned true.";
 
     if (use_java_handler_ || !handler_trampoline_.empty()) {
-      LOG(ERROR) << "Crashpad DEBUG: Using Java handler or trampoline.";
       std::vector<std::string> env;
       if (!BuildEnvironmentWithApk(kUse64Bit, &env)) {
-        LOG(ERROR) << "Crashpad DEBUG: BuildEnvironmentWithApk failed.";
         return database_path;
       }
-      LOG(ERROR) << "Crashpad DEBUG: BuildEnvironmentWithApk succeeded.";
 
       bool result = use_java_handler_
                         ? GetCrashpadClient().StartJavaHandlerAtCrash(
@@ -572,21 +555,17 @@ class HandlerStarter {
                               handler_trampoline_, handler_library_, kUse64Bit,
                               &env, database_path, metrics_path, url,
                               process_annotations, arguments);
-      LOG(ERROR) << "Crashpad DEBUG: StartJavaHandlerAtCrash or StartHandlerWithLinkerAtCrash result: " << result;
       DCHECK(result);
       return database_path;
     }
 
     if (!SetLdLibraryPath(exe_dir)) {
-      LOG(ERROR) << "Crashpad DEBUG: SetLdLibraryPath failed.";
       return database_path;
     }
-    LOG(ERROR) << "Crashpad DEBUG: SetLdLibraryPath succeeded.";
 
     bool result = GetCrashpadClient().StartHandlerAtCrash(
         handler_path, database_path, metrics_path, url, process_annotations,
         arguments);
-    LOG(ERROR) << "Crashpad DEBUG: StartHandlerAtCrash result (native): " << result;
     DCHECK(result);
     return database_path;
   }
@@ -696,14 +675,6 @@ bool PlatformCrashpadInitialization(
     const base::FilePath& exe_path,
     const std::vector<std::string>& initial_arguments,
     base::FilePath* database_path) {
-  LOG(ERROR) << "Crashpad DEBUG: PlatformCrashpadInitialization called.";
-  LOG(ERROR) << "Crashpad DEBUG:   initial_client: " << initial_client;
-  LOG(ERROR) << "Crashpad DEBUG:   browser_process: " << browser_process;
-  LOG(ERROR) << "Crashpad DEBUG:   embedded_handler: " << embedded_handler;
-  LOG(ERROR) << "Crashpad DEBUG:   user_data_dir: " << user_data_dir;
-  LOG(ERROR) << "Crashpad DEBUG:   exe_path: " << exe_path.value();
-  LOG(ERROR) << "Crashpad DEBUG:   initial_arguments.size(): " << initial_arguments.size();
-
   DCHECK_EQ(initial_client, browser_process);
   DCHECK(initial_arguments.empty());
 
@@ -722,26 +693,18 @@ bool PlatformCrashpadInitialization(
       static_cast<unsigned int>(base::RandInt(0, 99)) >= dump_percentage) {
     dump_at_crash = false;
   }
-  LOG(ERROR) << "Crashpad DEBUG:   dump_at_crash: " << dump_at_crash;
 
   if (browser_process) {
-    LOG(ERROR) << "Crashpad DEBUG: Running as browser process. Calling HandlerStarter::Initialize.";
     HandlerStarter* starter = HandlerStarter::Get();
     *database_path = starter->Initialize(dump_at_crash);
-    LOG(ERROR) << "Crashpad DEBUG:   database_path: " << database_path->value();
-    LOG(ERROR) << "Crashpad DEBUG: PlatformCrashpadInitialization finished (browser process).";
     return true;
   }
 
-  LOG(ERROR) << "Crashpad DEBUG: Running as child process.";
   crashpad::SandboxedHandler* handler = crashpad::SandboxedHandler::Get();
   bool result = handler->Initialize(dump_at_crash);
-  LOG(ERROR) << "Crashpad DEBUG: SandboxedHandler::Initialize result: " << result;
   DCHECK(result);
 
-  *database_path = base::FilePath(); // This will be an empty path for child process
-  LOG(ERROR) << "Crashpad DEBUG:   database_path (child process): " << database_path->value();
-  LOG(ERROR) << "Crashpad DEBUG: PlatformCrashpadInitialization finished (child process).";
+  *database_path = base::FilePath();
   return true;
 }
 

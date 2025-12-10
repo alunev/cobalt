@@ -938,8 +938,6 @@ void ChromeMainDelegate::CommonEarlyInitialization() {
   base::InitializePlatformThreadFeatures();
 #endif
 
-  LOG(ERROR) << "Initialize the HangWatcher.";
-
   // Initialize the HangWatcher.
   base::HangWatcher::ProcessType hang_watcher_process_type;
   if (process_type.empty()) {

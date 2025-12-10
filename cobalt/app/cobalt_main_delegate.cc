@@ -143,8 +143,8 @@ void CobaltMainDelegate::PreSandboxStartup() {
   crash_reporter::InitializeCrashpad(process_type.empty(), process_type);
 
   // For now we just want a minidump persisted in the on-device crash database.
-  // crash_reporter::SetUploadConsent(false);
-  LOG(ERROR) << "Crashpad DEBUG: Upload consent is ENABLED by default";
+  // it is uploaded by java uploader
+  crash_reporter::SetUploadConsent(false);
 
   return content::ShellMainDelegate::PreSandboxStartup();
 }

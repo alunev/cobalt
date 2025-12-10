@@ -16,7 +16,6 @@ bool OnJNIOnLoadInit() {
   InitAtExitManager();
   JNIEnv* env = base::android::AttachCurrentThread();
   base::android::InitGlobalClassLoader(env);
-
   return true;
 }
 

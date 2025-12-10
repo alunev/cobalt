@@ -199,8 +199,6 @@ static_library("starboard_platform") {
     "get_home_directory.cc",
     "graphics.cc",
     "graphics.h",
-    "hang_report_handler.cc",
-    "hang_report_handler.h",
 
     #"input_events_generator.cc",
     #"input_events_generator.h",
@@ -333,8 +331,6 @@ static_library("starboard_platform") {
 
   deps = [
     "//base",
-    "//third_party/crashpad/crashpad/snapshot",
-    "//third_party/crashpad/crashpad/util",
     "//third_party/libevent",
     "//third_party/opus",
   ]

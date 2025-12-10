@@ -822,7 +822,7 @@ void HangWatcher::WatchStateSnapShot::Init(
       // in the capture at that time.
       if (thread_marked && all_threads_marked) {
         hung_watch_state_copies_.push_back(
-            WatchStateCopy{deadline, watch_state->GetThreadID(), watch_state->thread_type()});
+            WatchStateCopy{deadline, watch_state->GetThreadID()});
       } else {
         all_threads_marked = false;
       }
@@ -988,12 +988,6 @@ void HangWatcher::DoDumpWithoutCrashing(
       watch_state_snapshot.GetHighestDeadline();
   HW_LOG("Latest expired deadline: " << latest_expired_deadline);
 
-#if BUILDFLAG(IS_ANDROID) && BUILDFLAG(IS_COBALT)
-  // HW_LOG("Reporting hang to Java.");
-  // HangWatcher::ReportHangToJava(watch_state_snapshot);
-  HW_LOG("SKIP Reporting hang to Java.");
-#endif
-
   if (on_hang_closure_for_testing_) {
     HW_LOG("Running on_hang_closure_for_testing.");
     on_hang_closure_for_testing_.Run();
@@ -1010,22 +1004,6 @@ void HangWatcher::DoDumpWithoutCrashing(
 
   capture_in_progress_.store(false, std::memory_order_relaxed);
   HW_LOG("Capture in progress store done.");
-}
-
-std::string ThreadTypeToString(HangWatcher::ThreadType type) {
-  switch (type) {
-    case HangWatcher::ThreadType::kIOThread:
-      return "IO";
-    case HangWatcher::ThreadType::kMainThread:
-      return "MAIN";
-    case HangWatcher::ThreadType::kThreadPoolThread:
-      return "WORKER";
-#if BUILDFLAG(IS_COBALT)
-    case HangWatcher::ThreadType::kRendererThread:
-      return "RENDERER_MAIN";
-#endif
-  }
-  return "UNKNOWN";
 }
 
 void HangWatcher::SetAfterMonitorClosureForTesting(
@@ -1086,7 +1064,6 @@ void HangWatcher::UnregisterThread() {
 
   watch_states_.erase(it);
 }
-
 
 namespace internal {
 namespace {
@@ -1154,7 +1131,7 @@ void HangWatchDeadline::SetDeadline(TimeTicks new_deadline) {
   const uint64_t new_flags =
       ExtractFlags(old_bits & kPersistentFlagsAndDeadlineMask);
   bits_.store(new_flags | ExtractDeadline(static_cast<uint64_t>(
-                              new_deadline.ToInternalValue())), 
+                              new_deadline.ToInternalValue())),
               std::memory_order_relaxed);
 }
 
@@ -1372,4 +1349,4 @@ PlatformThreadId HangWatchState::GetThreadID() const {
 
 }  // namespace internal
 
-} // namespace base
+}  // namespace base
