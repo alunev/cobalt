@@ -55,7 +55,7 @@ public class CrashFileManager {
      */
     public static final String CRASH_DUMP_DIR = "Crash Reports";
 
-    private static final String CRASHPAD_DIR = "Crashpad";
+    private static final String CRASHPAD_DIR = "crashpad";
     private static final String ANR_DIR = "ANRs";
 
     // This should mirror the C++ CrashUploadList::kReporterLogFilename variable.
@@ -356,7 +356,9 @@ public class CrashFileManager {
      * @return whether the crash directory already exists.
      */
     public boolean crashDirectoryExists() {
-        return getCrashDirectory().isDirectory();
+        File crashDir = getCrashDirectory();
+        Log.i(TAG, "Checking if crash directory exists: " + crashDir.getAbsolutePath());
+        return crashDir.isDirectory();
     }
 
     /**

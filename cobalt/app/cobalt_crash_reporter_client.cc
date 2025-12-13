@@ -40,8 +40,11 @@ void CobaltCrashReporterClient::GetProductNameAndVersion(
 
 bool CobaltCrashReporterClient::GetCrashDumpLocation(
     base::FilePath* crash_dir) {
+  // crash_dump_location_ = new base::FilePath(
+  //     "/data/data/com.google.android.youtube.tv/cache/crashpad");
   crash_dump_location_ = new base::FilePath(
-      "/data/data/com.google.android.youtube.tv/cache/crashpad");
+      "/data/user/0/com.google.android.youtube.tv/files/data/dev.cobalt.coat/"
+      "cache/crashpad");
   *crash_dir = *crash_dump_location_;
   return true;
 }

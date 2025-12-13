@@ -80,30 +80,41 @@ public class MinidumpUploadJobImpl implements MinidumpUploadJob {
         }
 
         private void invokeCallback(boolean reschedule) {
+            Log.i(TAG, "invokeCallback called with reschedule: " + reschedule);
             mIsActive = false;
             // No point in posting to UI thread since job scheduler's onStopJob() is not called on
             // the UI thread.
             // https://crbug.com/1401509
             mUploadsFinishedCallback.uploadsFinished(reschedule);
+            Log.i(TAG, "uploadsFinished callback invoked.");
         }
 
         @Override
         public void run() {
+            Log.i(TAG, "UploadRunnable.run() started.");
             // If the directory in where we store minidumps doesn't exist - then early out because
             // there are no minidumps to upload.
+            Log.i(TAG, "Crash"); 
             File crashParentDir = mDelegate.getCrashParentDir();
             if (!crashParentDir.isDirectory()) {
-                Log.e(TAG, "Parent crash directory doesn't exist!");
+                Log.e(TAG, "Parent crash directory doesn't exist! Path: " + crashParentDir.getAbsolutePath());
                 invokeCallback(false /* reschedule */);
                 return;
             }
+            Log.i(TAG, "Crash parent dir exists: " + crashParentDir.getAbsolutePath());
 
             final CrashFileManager fileManager = createCrashFileManager(crashParentDir);
+
+            // temp: force import of crashpad dumps to the mime-encoded pile
+            Log.i(TAG, "            fileManager.getMinidumpsSansLogcat()");
+            fileManager.getMinidumpsSansLogcat();
+
             if (!fileManager.crashDirectoryExists()) {
                 Log.e(TAG, "Crash directory doesn't exist!");
                 invokeCallback(false /* reschedule */);
                 return;
             }
+            Log.i(TAG, "CrashFileManager created for: " + crashParentDir.getAbsolutePath());
 
             File[] minidumps = fileManager.getMinidumpsReadyForUpload(MAX_UPLOAD_TRIES_ALLOWED);
 
@@ -114,16 +125,21 @@ public class MinidumpUploadJobImpl implements MinidumpUploadJob {
                         createMinidumpUploadCallable(minidump, fileManager.getCrashUploadLogFile());
                 @MinidumpUploadStatus
                 int uploadResult = uploadCallable.call();
+                Log.i(TAG, "Upload result for " + minidump.getName() + ": " + uploadResult);
 
                 // Record metrics about the upload.
                 if (uploadResult == MinidumpUploadStatus.SUCCESS) {
+                    Log.i(TAG, "Upload success for " + minidump.getName());
                     mDelegate.recordUploadSuccess(minidump);
                 } else if (uploadResult == MinidumpUploadStatus.FAILURE) {
+                    Log.w(TAG, "Upload failed for " + minidump.getName());
                     // Only record a failure after we have maxed out the allotted tries.
                     // Note: Add 1 to include the most recent failure, since the minidump's filename
                     // is from before the failure.
                     int numFailures = CrashFileManager.readAttemptNumber(minidump.getName()) + 1;
-                    if (numFailures == MAX_UPLOAD_TRIES_ALLOWED) {
+                    Log.i(TAG, "Number of failures for " + minidump.getName() + ": " + numFailures);
+                    if (numFailures >= MAX_UPLOAD_TRIES_ALLOWED) {
+                        Log.w(TAG, "Max upload tries reached for " + minidump.getName());
                         mDelegate.recordUploadFailure(minidump);
                     }
                 }
@@ -140,6 +156,7 @@ public class MinidumpUploadJobImpl implements MinidumpUploadJob {
                 // over to a metered connection, the callable will detect the changed network state,
                 // and not attempt an upload.
                 if (mCancelUpload) {
+                    Log.i(TAG, "Uploads canceled, bailing out.");
                     mIsActive = false;
                     return;
                 }
@@ -152,25 +169,35 @@ public class MinidumpUploadJobImpl implements MinidumpUploadJob {
                     String newName = CrashFileManager.tryIncrementAttemptNumber(minidump);
                     if (newName == null) {
                         Log.w(TAG, "Failed to increment attempt number of " + minidump);
+                    } else {
+                        Log.i(TAG, "Incremented attempt number for " + minidump.getName() + " to " + newName);
                     }
                 }
             }
 
             // Clean out old/uploaded minidumps. Note that this clean-up method is more strict than
             // our copying mechanism in the sense that it keeps fewer minidumps.
+            Log.i(TAG, "Cleaning out old minidump files.");
             fileManager.cleanOutAllNonFreshMinidumpFiles();
 
             // Reschedule if there are still minidumps to upload.
-            boolean reschedule =
-                    fileManager.getMinidumpsReadyForUpload(MAX_UPLOAD_TRIES_ALLOWED).length > 0;
+            File[] remainingMinidumps = fileManager.getMinidumpsReadyForUpload(MAX_UPLOAD_TRIES_ALLOWED);
+            boolean reschedule = remainingMinidumps.length > 0;
+            Log.i(TAG, "Reschedule needed: " + reschedule + " (" + remainingMinidumps.length + " minidumps remaining)");
             invokeCallback(reschedule);
+            Log.i(TAG, "UploadRunnable.run() finished.");
         }
     }
 
     @Override
     public void uploadAllMinidumps(
             final MinidumpUploadJob.UploadsFinishedCallback uploadsFinishedCallback) {
+        Log.i(TAG, "uploadAllMinidumps called.");
         ThreadUtils.assertOnUiThread();
+        Log.i(TAG, "uploadAllMinidumps after assertOnUiThread.");
+        if (mIsActive) {
+            Log.w(TAG, "uploadAllMinidumps called while already active!");
+        }
         assert !mIsActive;
         mCancelUpload = false;
         mIsActive = true;
@@ -178,6 +205,7 @@ public class MinidumpUploadJobImpl implements MinidumpUploadJob {
             @Override
             public void run() {
                 ThreadUtils.assertOnUiThread();
+                Log.i(TAG, "prepareToUploadMinidumps Runnable running.");
 
                 // Note that the upload job might have been canceled by this time. However, it's
                 // important to start the worker thread anyway to try to make some progress towards
@@ -186,8 +214,12 @@ public class MinidumpUploadJobImpl implements MinidumpUploadJob {
                 // still a chance to upload at least one minidump per job, as long as that job
                 // starts before it is canceled by the next job. See the UploadRunnable
                 // implementation for more details.
+                if (mCancelUpload) {
+                    Log.w(TAG, "Uploads were canceled before PostTask.");
+                }
                 PostTask.postTask(TaskTraits.BEST_EFFORT_MAY_BLOCK,
                         new UploadRunnable(uploadsFinishedCallback));
+                Log.i(TAG, "UploadRunnable posted to background task.");
             }
         });
     }
