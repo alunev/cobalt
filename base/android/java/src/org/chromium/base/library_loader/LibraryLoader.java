@@ -764,14 +764,16 @@ public class LibraryLoader {
             CurrentThreadTimeMillisTimer threadTimeTimer = new CurrentThreadTimeMillisTimer();
 
             if (useChromiumLinker() && !mFallbackToSystemLinker) {
-                if (DEBUG) Log.i(TAG, "Loading with the Chromium linker.");
-                // See base/android/linker/config.gni, the chromium linker is only enabled when
-                // we have a single library.
-                assert NativeLibraries.LIBRARIES.length == 1;
-                String library = NativeLibraries.LIBRARIES[0];
-                loadWithChromiumLinker(appInfo, library);
+                            if (DEBUG) Log.i(TAG, "Loading with the Chromium linker.");
+                            // See base/android/linker/config.gni, the chromium linker is only enabled when
+                            // we have a single library.
+                            assert NativeLibraries.LIBRARIES.length == 1;
+                            String library = NativeLibraries.LIBRARIES[0];
+                            Log.i(TAG, "LibraryLoader: Loading with Chromium linker: " + library);
+                            loadWithChromiumLinker(appInfo, library);      
             } else {
                 if (DEBUG) Log.i(TAG, "Loading with the System linker.");
+                Log.i(TAG, "LibraryLoader: Loading with System linker.");
                 loadWithSystemLinkerAlreadyLocked(appInfo, inZygote);
             }
 
@@ -835,6 +837,7 @@ public class LibraryLoader {
     // Invoke base::android::LibraryLoaded in library_loader_hooks.cc
     @GuardedBy("mLock")
     private void initializeAlreadyLocked() {
+        Log.i(TAG, "LibraryLoader: initializeAlreadyLocked called. mInitialized = " + mInitialized);
         if (mInitialized) {
             if (sEnableStateForTesting) {
                 mInitializedForTesting = true;

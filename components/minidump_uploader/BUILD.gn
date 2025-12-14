@@ -8,6 +8,11 @@ generate_jni("minidump_uploader_jni_headers") {
   sources = [ "android/java/src/org/chromium/components/minidump_uploader/CrashReportMimeWriter.java" ]
 }
 
+# This target generates the C++ registration code
+generate_jni_registration("minidump_uploader_jni") {
+  targets = [ ":minidump_uploader_java" ]
+}
+
 static_library("minidump_uploader") {
   sources = [
     "rewrite_minidumps_as_mimes.cc",
@@ -15,7 +20,8 @@ static_library("minidump_uploader") {
   ]
 
   deps = [
-    ":minidump_uploader_jni_headers",
+    ":minidump_uploader_jni",  # Depend on the registration target
+    ":minidump_uploader_jni_headers", # Ensure headers are available to sources
     "//base",
     "//components/crash/android:anr_skipped_reason",
     "//components/version_info",
@@ -30,6 +36,7 @@ static_library("minidump_uploader") {
 
 android_library("minidump_uploader_java") {
   deps = [
+    ":minidump_uploader_jni_headers",  # Ensure headers are available
     "//base:base_java",
     "//base:jni_java",
     "//build/android:build_java",

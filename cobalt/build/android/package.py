@@ -63,7 +63,7 @@ def build(platforms_to_package):
 
       patch_args_for_google3(out_dir)
 
-      subprocess.call(['autoninja', '-C', out_dir, 'cobalt:gn_all'])
+      subprocess.call(['autoninja', '-v', '-C', out_dir, 'cobalt:gn_all'])
 
 
 def package(platforms_to_package):

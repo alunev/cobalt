@@ -8,6 +8,11 @@
   global:
     JNI_OnLoad;
     Java_*;
+    Java_org_*;
+    # Explicitly keep minidump_uploader symbols
+    Java_org_chromium_base_natives_GEN_1JNI_org_1chromium_1components_1minidump_11uploader_1CrashReportMimeWriter_1rewriteAnrsAsMIMEs;
+    Java_org_chromium_base_natives_GEN_1JNI_org_1chromium_1components_1minidump_11uploader_1CrashReportMimeWriter_1rewriteMinidumpsAsMIMEs;
+    Java_org_chromium_base_natives_GEN_1JNI_org_1chromium_1components_1minidump_11uploader_1CrashReportMimeWriter_1rewriteMinidumpsAsMIMEsAndGetCrashKeys;
   local:
     *;
 };

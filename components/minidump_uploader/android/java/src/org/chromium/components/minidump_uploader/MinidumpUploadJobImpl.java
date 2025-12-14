@@ -89,9 +89,21 @@ public class MinidumpUploadJobImpl implements MinidumpUploadJob {
             Log.i(TAG, "uploadsFinished callback invoked.");
         }
 
+
         @Override
         public void run() {
             Log.i(TAG, "UploadRunnable.run() started.");
+
+            try {
+                // Ensure the native library is loaded.
+                System.loadLibrary("chrobalt");
+                Log.i(TAG, "Native library loaded for MinidumpUploadJob.");
+            } catch (Throwable e) {
+                Log.e(TAG, "Failed to load native library", e);
+                invokeCallback(false /* reschedule */);
+                return;
+            }
+
             // If the directory in where we store minidumps doesn't exist - then early out because
             // there are no minidumps to upload.
             Log.i(TAG, "Crash"); 

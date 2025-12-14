@@ -4,6 +4,7 @@
 
 package org.chromium.components.minidump_uploader;
 
+import android.util.Log;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.annotations.NativeMethods;
 
@@ -29,6 +30,9 @@ public class CrashReportMimeWriter {
      * @param destDir The directory in which to write the MIME files.
      */
     public static void rewriteMinidumpsAsMIMEs(File srcDir, File destDir) {
+        Log.i(TAG, "rewriteMinidumpsAsMIMEs called. srcDir: " + srcDir + ", destDir: " + destDir);
+        Log.i(TAG, "ClassLoader: " + CrashReportMimeWriter.class.getClassLoader());
+        Log.i(TAG, "GEN_JNI ClassLoader: " + org.chromium.base.natives.GEN_JNI.class.getClassLoader());
         CrashReportMimeWriterJni.get().rewriteMinidumpsAsMIMEs(
                 srcDir.getAbsolutePath(), destDir.getAbsolutePath());
     }
@@ -41,6 +45,7 @@ public class CrashReportMimeWriter {
      * @param destDir The directory in which to write the MIME files.
      */
     public static void rewriteAnrsAsMIMEs(List<String> anrs, File destDir) {
+        Log.i(TAG, "rewriteAnrsAsMIMEs called. anrFiles: " + anrs + ", destDir: " + destDir);
         CrashReportMimeWriterJni.get().rewriteAnrsAsMIMEs(
                 anrs.toArray(new String[0]), destDir.getAbsolutePath());
     }
@@ -56,6 +61,7 @@ public class CrashReportMimeWriter {
      */
     public static Map<String, Map<String, String>> rewriteMinidumpsAsMIMEsAndGetCrashKeys(
             File srcDir, File destDir) {
+        Log.i(TAG, "rewriteMinidumpsAsMIMEsAndGetCrashKeys called. srcDir: " + srcDir + ", destDir: " + destDir);
         String[] crashesKeyValueArr =
                 CrashReportMimeWriterJni.get().rewriteMinidumpsAsMIMEsAndGetCrashKeys(
                         srcDir.getAbsolutePath(), destDir.getAbsolutePath());

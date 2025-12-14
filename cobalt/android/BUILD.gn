@@ -178,6 +178,7 @@ shared_library("libchrobalt") {
     "//cobalt/shell:pak",
     "//components/crash/content/browser",
     "//components/memory_system",
+    "//components/minidump_uploader",
     "//media",
     "//skia",
     "//starboard/android/shared:starboard_jni_state",

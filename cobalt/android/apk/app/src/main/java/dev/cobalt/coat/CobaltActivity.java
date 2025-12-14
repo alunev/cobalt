@@ -131,6 +131,7 @@ public abstract class CobaltActivity extends Activity {
 
     // This initializes JNI and ends up calling JNI_OnLoad in native code
     LibraryLoader.getInstance().ensureInitialized();
+    Log.i(TAG, "CobaltActivity ClassLoader: " + CobaltActivity.class.getClassLoader());
 
     // StarboardBridge initialization must happen right after library loading,
     // before Browser/Content module is started. It currently tracks its own JNI state
