@@ -59,20 +59,20 @@ def build(package_platforms):
     for config in CONFIGS:
       out_dir = out_dir_for_google3(platform, config)
 
-      subprocess.call(
+      subprocess.check_call(
           ['cobalt/build/gn.py', out_dir, '-p', platform, '-c', config])
 
       patch_args_for_google3(out_dir)
 
-      subprocess.call(['autoninja', '-C', out_dir, 'cobalt:gn_all'])
+      subprocess.check_call(['autoninja', '-C', out_dir, 'cobalt:gn_all'])
 
 
 def package(package_platforms, package_branch):
-  subprocess.call(['rm', '-rf', 'out/packages'])
+  subprocess.check_call(['rm', '-rf', 'out/packages'])
   for platform in package_platforms:
     for config in CONFIGS:
       out_dir = out_dir_for_google3(platform, config)
-      subprocess.call([
+      subprocess.check_call([
           'cobalt/build/packager.py',
           f'--name={platform}_{config}',
           '--json_path=cobalt/build/android/package.json',
